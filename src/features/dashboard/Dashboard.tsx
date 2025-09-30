@@ -3,7 +3,7 @@ import { formatCurrency } from '@/lib/utils'
 import { TrendingUp, TrendingDown, DollarSign, Building2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import {DashboardData, getDashboardData} from '@/lib/services/dashboard.service'
-import { useCompanies } from '@/contexts/CompaniesContext'
+import { useCompanies } from '@/hooks/useCompanies'
 import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from "@/components/ui/skeleton"
 import { useState} from 'react'
@@ -71,6 +71,10 @@ export function Dashboard() {
           <h1 className="text-3xl font-bold text-foreground">Dashboard Gerencial</h1>
           <p className="text-muted-foreground">Visão geral do sistema financeiro</p>
         </div>
+        <div>
+          
+        </div>
+        0033166923798349
 
         <DateRangeFilter
           startDate={startDate}

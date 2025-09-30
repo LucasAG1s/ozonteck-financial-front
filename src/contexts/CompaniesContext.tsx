@@ -1,5 +1,5 @@
 // src/contexts/CompaniesContext.tsx
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useEffect, useState } from "react"
 import { getCompanies, Company } from "@/lib/services/company.service"
 
 interface CompaniesContextType {
@@ -9,7 +9,7 @@ interface CompaniesContextType {
   loading: boolean
 }
 
-const CompaniesContext = createContext<CompaniesContextType | undefined>(undefined)
+export const CompaniesContext = createContext<CompaniesContextType | undefined>(undefined)
 
 const CACHE_KEY = "companies_cache"
 const CACHE_TIME = 1000 * 60 * 15 
@@ -55,8 +55,3 @@ export function CompaniesProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function useCompanies() {
-  const context = useContext(CompaniesContext)
-  if (!context) throw new Error("useCompanies deve ser usado dentro de CompaniesProvider")
-  return context
-}

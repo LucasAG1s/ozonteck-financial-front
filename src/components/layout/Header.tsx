@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useAuth } from '@/hooks/useAuth'
-import { useCompanies } from '@/contexts/CompaniesContext';
+import { useCompanies } from '@/hooks/useCompanies';
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -18,7 +18,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth()
-  const { companies, selectedCompany, setSelectedCompany, loading } = useCompanies()
+  const { companies, selectedCompany, setSelectedCompany } = useCompanies()
 
   const getRoleLabel = (roleName: string) => {
     switch (roleName) {
@@ -46,7 +46,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="flex items-center space-x-2">
-                <span>{selectedCompany?.corporate_name}</span>
+                <span>{selectedCompany?.trade_name}</span>
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -57,7 +57,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   onClick={() => setSelectedCompany(empresa)}
                   className="flex flex-col items-start p-3"
                 >
-                  <div className="font-medium">{empresa.corporate_name}</div>
+                  <div className="font-medium">{empresa.trade_name}</div>
                   <div className="text-xs text-muted-foreground">CNPJ: {empresa.cnpj}</div>
                 </DropdownMenuItem>
               ))}
