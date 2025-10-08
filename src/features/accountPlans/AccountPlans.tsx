@@ -1,13 +1,14 @@
 import { useState, useMemo } from "react";
 import { AccountPlan, getAccountPlans, createAccountPlan, CreateAccountPlanPayload, deleteAccountPlan, updateAccountPlan, UpdateAccountPlanPayload } from "@/lib/services/finance/account-plan.service";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Plus, Trash2, Edit } from "lucide-react";
 import { toast } from "react-toastify";
-import { AccountPlanForm } from "./AccountPlanForm";
+import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +20,13 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 
+// Schema de validação para o formulário de planos de conta
+const accountPlanSchema = z.object({
+  name: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres.'),
+  type: z.coerce.number().min(1, 'O tipo é obrigatório.'),
+  description: z.string().optional(),
+  parent_id: z.coerce.number().nullable(),
+});
 type AccountPlanNode = AccountPlan & { children: AccountPlanNode[] };
 
 
@@ -190,6 +198,38 @@ export function AccountPlans() {
     });
   };
 
+  // Configuração dos campos para o GenericForm
+  const formFields: FormFieldConfig[] = [
+    { name: 'name', label: 'Nome', type: 'text', placeholder: 'Nome do plano de conta', gridCols: 2 },
+    {
+      name: 'type',
+      label: 'Tipo',
+      type: 'select',
+      placeholder: 'Selecione o tipo',
+      options: [
+        { value: 1, label: 'Receita' },
+        { value: 2, label: 'Despesa' },
+      ],
+      gridCols: 1,
+    },
+    {
+      name: 'parent_id',
+      label: 'Plano Pai (Opcional)',
+      type: 'select',
+      placeholder: 'Nenhum (Plano Raiz)',
+      // ATENÇÃO: O GenericForm atual não suporta filtragem dinâmica de opções
+      // baseada em outros campos do formulário (ex: tipo).
+      // Todas as opções de planos de conta serão exibidas aqui.
+      options: [{ value: 'null', label: 'Nenhum (Plano Raiz)' }, ...plans.map(plan => ({
+        value: plan.id,
+        label: `${plan.name} (${plan.type === 1 ? 'Receita' : 'Despesa'})`
+      }))],
+      gridCols: 1,
+    },
+    { name: 'description', label: 'Descrição (Opcional)', type: 'textarea', placeholder: 'Descrição detalhada do plano', gridCols: 2 },
+  ];
+
+
   if (isLoading) return <Skeleton className="h-96 w-full" />;
   if (isError) return <p className="text-destructive">Ocorreu um erro: {error instanceof Error ? error.message : 'Erro desconhecido'}</p>;
 
@@ -212,12 +252,15 @@ export function AccountPlans() {
           </Table>
         </CardContent>
       </Card>
-      <AccountPlanForm
+      <GenericForm
         isOpen={isModalOpen}
         onOpenChange={(isOpen) => { if (!isOpen) setPlanToEdit(null); setIsModalOpen(isOpen); }}
         onSubmit={handleSubmit}
         isLoading={isCreating || isUpdating}
-        allPlans={plans}
+        fields={formFields}
+        schema={accountPlanSchema}
+        title={planToEdit ? 'Editar Plano de Conta' : 'Novo Plano de Conta'}
+        description={planToEdit ? 'Altere as informações do plano de conta.' : 'Preencha as informações para cadastrar um novo plano.'}
         initialData={planToEdit}
       />
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
