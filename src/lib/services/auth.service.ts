@@ -110,7 +110,7 @@ class AuthService {
 
   async getProfile(): Promise<User> {
     try {
-      const response = await api.get<User>('/user/me');
+      const response = await api.get<User>('api/user/me');
       return response.data;
     } catch (error) {
       throw handleApiError(error);

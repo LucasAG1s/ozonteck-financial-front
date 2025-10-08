@@ -10,7 +10,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useAuth } from '@/hooks/useAuth'
-import { useCompanies } from '@/hooks/useCompanies';
+import { useCompanies } from '@/hooks/useCompanies'
+import { formatCNPJ } from '@/lib/utils'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -58,7 +59,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                   className="flex flex-col items-start p-3"
                 >
                   <div className="font-medium">{empresa.trade_name}</div>
-                  <div className="text-xs text-muted-foreground">CNPJ: {empresa.cnpj}</div>
+                  <div className="text-xs text-muted-foreground">CNPJ: {formatCNPJ(empresa.cnpj)}</div>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>

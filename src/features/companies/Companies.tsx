@@ -4,12 +4,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { 
+  AlertDialog,
+   AlertDialogAction,
+    AlertDialogCancel,
+     AlertDialogContent,
+      AlertDialogDescription,
+       AlertDialogFooter,
+        AlertDialogHeader,
+         AlertDialogTitle
+} from "@/components/ui/alert-dialog"
 import { Label } from '@/components/ui/label'
 import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 import { formatCNPJ } from '@/lib/utils'
 import { toast } from 'react-toastify'
-import { Company, getCompanies, createCompany, updateCompany, deleteCompany } from '@/lib/services/company.service'
+import { Company, getCompanies, createCompany, updateCompany, deleteCompany } from '@/lib/services/finance/company.service'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -28,7 +37,7 @@ const initialFormData: Omit<Company, 'id'> = {
   email: ''
 };
 
-export function Empresas() {
+export function Companies() {
   const queryClient = useQueryClient();
 
   const { data: empresas = [], isLoading, isError } = useQuery<Company[]>({

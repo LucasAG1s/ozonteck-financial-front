@@ -2,6 +2,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import {
   Building2,
+  ListTree,
+  Building,
   TrendingUp,
   TrendingDown,
   FileText,
@@ -22,15 +24,16 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
-  { name: 'Empresas', href: '/empresas', icon: Building2 },
-  { name: 'Entradas', href: '/entradas', icon: TrendingUp },
-  { name: 'Saídas', href: '/saidas', icon: TrendingDown },
+  { name: 'Planos de Contas', href: '/account-plans', icon: ListTree },
+  { name: 'Empresas', href: '/companies', icon: Building2 },
+  { name: 'Entradas', href: '/entries', icon: TrendingUp },
+  { name: 'Saídas', href: '/expenses', icon: TrendingDown },
   { name: 'DRE Gerencial', href: '/dre', icon: BarChart3 },
-  { name: 'Relatórios', href: '/relatorios', icon: FileText },
+  { name: 'Relatórios', href: '/reports', icon: FileText },
   { name: 'Colaboradores', href: '/colaboradores', icon: Users },
-  { name: 'Fornecedores', href: '/fornecedores', icon: Truck },
+  { name: 'Fornecedores', href: '/suppliers', icon: Truck },
   { name: 'Pagamentos', href: '/pagamentos', icon: CreditCard },
-  { name: 'Integrações', href: '/integracoes', icon: Building2 },
+  { name: 'Integrações', href: '/integracoes', icon: Building },
   { name: 'Usuários', href: '/usuarios', icon: Settings },
 ]
 
@@ -39,7 +42,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile overlay */}
       {isOpen && (
         <div 
           className="fixed inset-0 z-40 bg-black/50 lg:hidden" 
@@ -47,7 +49,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         />
       )}
       
-      {/* Sidebar */}
       <div className={cn(
         "fixed inset-y-0 left-0 z-50 w-64 bg-background shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 border-r border-border",
         isOpen ? "translate-x-0" : "-translate-x-full"

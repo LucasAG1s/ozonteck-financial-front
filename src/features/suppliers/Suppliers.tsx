@@ -39,7 +39,7 @@ interface FornecedorForm {
   observacoes: string;
 }
 
-export function Fornecedores() {
+export function Suppliers() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([
     {
       id: 1,
@@ -557,4 +557,4 @@ export function Fornecedores() {
   );
 }
 
-export default Fornecedores;
+export default Suppliers;

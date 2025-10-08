@@ -53,7 +53,7 @@ const entradasIniciais: Entrada[] = [
   }
 ]
 
-export function Entradas() {
+export function Entries() {
   const [entradas, setEntradas] = useState<Entrada[]>(entradasIniciais)
   const [busca, setBusca] = useState('')
   const [filtroData, setFiltroData] = useState('')

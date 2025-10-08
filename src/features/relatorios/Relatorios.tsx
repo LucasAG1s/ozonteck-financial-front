@@ -33,14 +33,13 @@ interface IndicadorCard {
   percentual?: number
 }
 
-export function Relatorios() {
+export function Reports() {
   const [dataInicio, setDataInicio] = useState('2024-01-01')
   const [dataFim, setDataFim] = useState('2024-06-30')
   const [cnpjSelecionado, setCnpjSelecionado] = useState('12.345.678/0001-90')
   const [tipoGrafico, setTipoGrafico] = useState<'bar' | 'line'>('bar')
 
 
-  // Cálculos dos totais
   const totalEntradas = dadosIniciais.reduce((sum, item) => sum + item.entradas, 0)
   const totalSaidas = dadosIniciais.reduce((sum, item) => sum + item.saidas, 0)
   const saldoTotal = totalEntradas - totalSaidas

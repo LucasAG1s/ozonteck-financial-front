@@ -3,19 +3,20 @@ import { Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastContainer } from 'react-toastify'
 import { AuthProvider } from '@/contexts/AuthContext'
-import { CompaniesProvider } from '@/contexts/CompaniesContext' // 👈 importar
+import { CompaniesProvider } from '@/contexts/CompaniesContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Layout } from './components/layout/Layout'
 import { Dashboard } from './features/dashboard/Dashboard'
-import { Empresas } from './features/empresas/Empresas'
-import { Entradas } from './features/entradas/Entradas'
-import { Saidas } from './features/saidas/Saidas'
-import { Relatorios } from './features/relatorios/Relatorios'
+import { AccountPlans } from './features/accountPlans/AccountPlans'
+import { Companies } from './features/companies/Companies'
+import { Entries } from './features/entries/Entries'
+import { Expenses } from './features/expenses/Expenses'
+import { Reports } from './features/relatorios/Relatorios'
 import { Colaboradores } from './features/colaboradores/Colaboradores'
 import { Pagamentos } from './features/pagamentos/Pagamentos'
 import { Integracoes } from './features/integracoes/Integracoes'
-import { Usuarios } from './features/usuarios/Usuarios'
-import { Fornecedores } from './features/fornecedores/Fornecedores'
+import { Usuarios } from './features/users/Users'
+import { Suppliers } from './features/suppliers/Suppliers'
 import { Login } from './features/auth/Login'
 import { DRE } from './features/dre/DRE'
 import 'react-toastify/dist/ReactToastify.css'
@@ -27,12 +28,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        {/* 👉 Contexto de Empresas englobando tudo que depende do usuário logado */}
         <CompaniesProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
-              path="/*"
+              path="/"
               element={
                 <ProtectedRoute>
                   <Layout />
@@ -41,26 +41,34 @@ function App() {
             >
               <Route index element={<Dashboard />} />
               <Route
-                path="empresas"
+                path="companies"
                 element={
-                  <ProtectedRoute requiredPermission="empresas">
-                    <Empresas />
+                  <ProtectedRoute requiredPermission="companies">
+                    <Companies />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="entradas"
+                path="account-plans"
                 element={
-                  <ProtectedRoute requiredPermission="entradas">
-                    <Entradas />
+                  <ProtectedRoute requiredPermission="plans">
+                    <AccountPlans />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="saidas"
+                path="entries"
                 element={
-                  <ProtectedRoute requiredPermission="saidas">
-                    <Saidas />
+                  <ProtectedRoute requiredPermission="entries">
+                    <Entries />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="expenses"
+                element={
+                  <ProtectedRoute requiredPermission="expenses">
+                    <Expenses />
                   </ProtectedRoute>
                 }
               />
@@ -73,10 +81,10 @@ function App() {
                 }
               />
               <Route
-                path="relatorios"
+                path="reports"
                 element={
-                  <ProtectedRoute requiredPermission="relatorios">
-                    <Relatorios />
+                  <ProtectedRoute requiredPermission="reports">
+                    <Reports />
                   </ProtectedRoute>
                 }
               />
@@ -89,10 +97,10 @@ function App() {
                 }
               />
               <Route
-                path="fornecedores"
+                path="suppliers"
                 element={
-                  <ProtectedRoute requiredPermission="fornecedores">
-                    <Fornecedores />
+                  <ProtectedRoute requiredPermission="suppliers">
+                    <Suppliers />
                   </ProtectedRoute>
                 }
               />
@@ -120,7 +128,11 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-            </Route>
+            </Route> {/* Fim da rota PAI que contém o Layout */}
+            
+            {/* Você pode adicionar uma rota de "Não Encontrado" (404) aqui se desejar */}
+            {/* <Route path="*" element={<NotFoundPage />} /> */}
+            
           </Routes>
           <ToastContainer
             position="top-right"
@@ -141,4 +153,4 @@ function App() {
   )
 }
 
-export default App
+export default App;

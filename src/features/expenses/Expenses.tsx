@@ -60,7 +60,7 @@ const saidasIniciais: Saida[] = [
   }
 ]
 
-export function Saidas() {
+export function Expenses() {
   const [saidas, setSaidas] = useState<Saida[]>(saidasIniciais)
   const [busca, setBusca] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')

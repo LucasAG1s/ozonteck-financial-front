@@ -28,16 +28,17 @@ export interface User {
   roles: Role[]
   permissions: {
     dashboard: boolean
-    empresas: boolean
-    entradas: boolean
-    saidas: boolean
-    relatorios: boolean
+    plans: boolean
+    companies: boolean
+    entries: boolean
+    expenses: boolean
+    reports: boolean
     colaboradores: boolean
     dre:boolean
     pagamentos: boolean
     integracoes: boolean
     usuarios: boolean
-    fornecedores: boolean
+    suppliers: boolean
   }
 }
 
@@ -50,47 +51,49 @@ interface AuthContextType {
   hasPermission: (permission: keyof User['permissions']) => boolean
 }
 
-// Função para mapear permissões baseadas no role
 const getPermissionsByRole = (roleName: string) => {
   const rolePermissions = {
     'Master': {
       dashboard: true,
-      empresas: true,
-      entradas: true,
-      saidas: true,
-      relatorios: true,
+      plans: true,
+      companies: true,
+      entries: true,
+      expenses: true,
+      reports: true,
       colaboradores: true,
       pagamentos: true,
       integracoes: true,
       usuarios: true,
-      fornecedores: true,
+      suppliers: true,
       dre:true
     },
     'Gerente': {
       dashboard: true,
-      empresas: true,
-      entradas: true,
-      saidas: true,
-      relatorios: true,
+      plans: true,
+      companies: true,
+      entries: true,
+      expenses: true,
+      reports: true,
       colaboradores: true,
       pagamentos: true,
       integracoes: false,
       usuarios: false,
-      fornecedores: true,
+      suppliers: true,
       dre:true
 
     },
     'Auxiliar': {
       dashboard: true,
-      empresas: false,
-      entradas: true,
-      saidas: true,
-      relatorios: false,
+      plans: true,
+      companies: false,
+      entries: true,
+      expenses: true,
+      reports: false,
       colaboradores: false,
       pagamentos: false,
       integracoes: false,
       usuarios: false,
-      fornecedores: false,
+      suppliers: true,
       dre:true
 
     }
@@ -119,7 +122,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         
         if (isAuthenticated === 'true' && token) {
           try {
-            // Tentar buscar o perfil atualizado do usuário
             const userProfile = await authService.getProfile()
             const permissions = getPermissionsByRole(userProfile.roles[0]?.name || 'auxiliar')
             
@@ -131,13 +133,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setUser(userData)
             localStorage.setItem('user', JSON.stringify(userData))
           } catch (error) {
-            // Se falhar ao buscar o perfil, tentar usar dados salvos
             const savedUserData = localStorage.getItem('user')
             if (savedUserData) {
               const parsedUser = JSON.parse(savedUserData)
               setUser(parsedUser)
             } else {
-              // Se não há dados salvos, fazer logout
               localStorage.removeItem('isAuthenticated')
               localStorage.removeItem('authToken')
               localStorage.removeItem('user')

@@ -1,5 +1,4 @@
-// src/services/dashboard.service.ts ou .js
-import api from '../axios';
+import api from '@/lib/axios';
 
 export interface DashboardData {
   cardsData: any;

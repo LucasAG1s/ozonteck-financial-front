@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 import { TrendingUp, TrendingDown, DollarSign, Building2 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-import {DashboardData, getDashboardData} from '@/lib/services/dashboard.service'
+import {DashboardData, getDashboardData} from '@/lib/services/finance/dashboard.service'
 import { useCompanies } from '@/hooks/useCompanies'
 import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from "@/components/ui/skeleton"

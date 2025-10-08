@@ -2,7 +2,6 @@ import axios from 'axios';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://financial.ozonteck.cloud/api';
 
-// Configuração base do Axios
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
