@@ -1,5 +1,4 @@
-import api from "@/lib/axios";
-import axios from "axios";
+import api, {handleApiError} from "@/lib/axios";
 
 
 export interface Company {
@@ -36,12 +35,7 @@ export async function createCompany(companyData: NewCompanyPayload): Promise<Com
     const response = await api.post<Company>('/api/companies/create', companyData)
     return response.data
   }catch(error){
-    
-    if(axios.isAxiosError(error) && error.response){
-      const apiMessage = error.response.data?.message
-      throw new Error(apiMessage || 'Ocorreu um erro ao criar a empresa')
-    }
-    throw new Error('Ocorreu um erro inesperado de comunicação')
+    throw handleApiError(error, 'Ocorreu um erro ao criar a empresa.');
   }
 }
 
@@ -54,14 +48,8 @@ export async function updateCompany({ id, payload }: { id: number; payload: Upda
     const response = await api.patch<Company>(`/api/companies/${id}`, payload)
     return response.data
 
-  } catch (error) {
-
-    if (axios.isAxiosError(error) && error.response) {
-      const apiMessage = error.response.data?.message
-      throw new Error(apiMessage || 'Ocorreu um erro ao atualizar os dados.');
-
-    }
-    throw new Error('Ocorreu um erro inesperado de comunicação.');
+  } catch(error){
+    throw handleApiError(error, 'Ocorreu um erro ao criar a empresa.');
   }
 }
 
@@ -72,12 +60,6 @@ export async function deleteCompany(id: number): Promise<void> {
   try {
     await api.delete(`/api/companies/delete/${id}`);
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const apiMessage = error.response?.data?.message;
-      if (apiMessage) {
-        throw new Error(apiMessage);
-      }
-    }
-    throw new Error('Ocorreu um erro inesperado ao tentar excluir a empresa.');
+    throw handleApiError(error, 'Ocorreu um erro ao criar a empresa.');
   }
 }

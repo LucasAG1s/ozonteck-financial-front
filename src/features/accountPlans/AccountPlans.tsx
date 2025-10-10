@@ -9,18 +9,8 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Plus, Trash2, Edit } from "lucide-react";
 import { toast } from "react-toastify";
 import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 
-// Schema de validação para o formulário de planos de conta
 const accountPlanSchema = z.object({
   name: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres.'),
   type: z.coerce.number().min(1, 'O tipo é obrigatório.'),
@@ -115,6 +105,9 @@ export function AccountPlans() {
   const { data: plans = [], isLoading, isError, error } = useQuery<AccountPlan[]>({
     queryKey: ['accountPlans'],
     queryFn: getAccountPlans,
+    staleTime: 1000 * 60 * 5, 
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { mutate: createPlanMutation, isPending: isCreating } = useMutation({
@@ -198,8 +191,7 @@ export function AccountPlans() {
     });
   };
 
-  // Configuração dos campos para o GenericForm
-  const formFields: FormFieldConfig[] = [
+  const formFields: FormFieldConfig<typeof accountPlanSchema>[] = [
     { name: 'name', label: 'Nome', type: 'text', placeholder: 'Nome do plano de conta', gridCols: 2 },
     {
       name: 'type',
@@ -263,27 +255,14 @@ export function AccountPlans() {
         description={planToEdit ? 'Altere as informações do plano de conta.' : 'Preencha as informações para cadastrar um novo plano.'}
         initialData={planToEdit}
       />
-      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Você tem certeza absoluta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Essa ação não pode ser desfeita. Isso irá excluir permanentemente o
-              plano de conta. Planos de conta que possuem filhos não podem ser excluídos.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPlanToDelete(null)}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >{isDeleting ? "Excluindo..." : "Confirmar Exclusão"}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        isOpen={isAlertOpen}
+        onOpenChange={setIsAlertOpen}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+        title="Excluir Plano de Conta?"
+        description="Essa ação não pode ser desfeita. Isso irá excluir permanentemente o plano de conta. Planos que possuem filhos não podem ser excluídos."
+      />
     </div>
   );
 }

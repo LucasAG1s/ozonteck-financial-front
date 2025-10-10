@@ -1,9 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, format, subMonths, subQuarters, subYears } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronDown, ChevronRight, Filter, TrendingUp, TrendingDown, Scale, Target, PieChart, BarChart, CheckCircle, AlertCircle, Info, ArrowUp, ArrowDown, Minus } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCompanies } from '@/hooks/useCompanies';
+import { getDre } from '@/lib/services/finance/dre.service'
+import { DateRangeFilter } from '@/components/ui/dateRangeFilter';
+import { BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
-type DRENode = {
+interface DRENode {
   id: number
   name: string
   description: string | null
@@ -15,341 +23,20 @@ type DRENode = {
   total: number
   children: DRENode[]
 }
-
-type DREPayload = {
-  success: boolean
-  dre: Record<string, DRENode>
-  summary: Record<string, number>
-}
-
-const MOCK_DRE: DREPayload = {
-    success: true,
-    summary: {
-        "receita_bruta": 2975000,
-        "deducoes": -330000,
-        "receita_liquida": 2645000,
-        "cmv_csv": -1400000,
-        "lucro_bruto": 1245000,
-        "despesas_operacionais": -784500,
-        "lucro_operacional": 460500,
-        "outras_receitas_despesas": 17000,
-        "lucro_liquido": 477500,
-        "margem_bruta": 47.1,
-        "margem_operacional": 17.4,
-        "margem_liquida": 18.1
-    },
-    dre: {
-        "0": {
-            "id": 1,
-            "name": "Receita Bruta",
-            "description": null,
-            "parent_id": null,
-            "type": 1,
-            "created_at": "2025-09-10T20:07:51.000000Z",
-            "updated_at": "2025-09-10T20:07:51.000000Z",
-            "deleted_at": null,
-            "total": 0,
-            "children": [
-                {
-                    "id": 2,
-                    "name": "Receita de Vendas",
-                    "description": null,
-                    "parent_id": 1,
-                    "type": 1,
-                    "created_at": "2025-09-10T20:07:51.000000Z",
-                    "updated_at": "2025-09-10T20:07:51.000000Z",
-                    "deleted_at": null,
-                    "total": 0,
-                    "children": [
-                        {
-                            "id": 24,
-                            "name": "Receitas Diversas 2",
-                            "description": "Teste de post para criar",
-                            "parent_id": 2,
-                            "type": 1,
-                            "created_at": "2025-09-11T16:58:30.000000Z",
-                            "updated_at": "2025-09-11T16:58:30.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        }
-                    ]
-                },
-                {
-                    "id": 3,
-                    "name": "Deduções da Receita Bruta",
-                    "description": null,
-                    "parent_id": 1,
-                    "type": 1,
-                    "created_at": "2025-09-10T20:07:52.000000Z",
-                    "updated_at": "2025-09-10T20:07:52.000000Z",
-                    "deleted_at": null,
-                    "total": 0,
-                    "children": [
-                        {
-                            "id": 4,
-                            "name": "Impostos sobre Vendas",
-                            "description": null,
-                            "parent_id": 3,
-                            "type": null,
-                            "created_at": "2025-09-10T20:07:52.000000Z",
-                            "updated_at": "2025-09-10T20:07:52.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        },
-                        {
-                            "id": 5,
-                            "name": "Devoluções de Vendas",
-                            "description": null,
-                            "parent_id": 3,
-                            "type": null,
-                            "created_at": "2025-09-10T20:07:52.000000Z",
-                            "updated_at": "2025-09-10T20:07:52.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        }
-                    ]
-                },
-                {
-                    "id": 23,
-                    "name": "Teste",
-                    "description": "Teste de post para criar",
-                    "parent_id": 1,
-                    "type": 1,
-                    "created_at": "2025-09-10T21:01:53.000000Z",
-                    "updated_at": "2025-09-10T21:01:53.000000Z",
-                    "deleted_at": null,
-                    "total": 0,
-                    "children": [
-                        {
-                            "id": 25,
-                            "name": "Receitas Dispersas",
-                            "description": "Teste de post para criar",
-                            "parent_id": 23,
-                            "type": 1,
-                            "created_at": "2025-09-11T17:01:36.000000Z",
-                            "updated_at": "2025-09-11T17:01:36.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        }
-                    ]
-                }
-            ]
-        },
-        "3": {
-            "id": 20,
-            "name": "Outras Receitas e Despesas",
-            "description": null,
-            "parent_id": null,
-            "type": 1,
-            "created_at": "2025-09-10T20:07:52.000000Z",
-            "updated_at": "2025-09-10T20:07:52.000000Z",
-            "deleted_at": null,
-            "total": 0,
-            "children": [
-                {
-                    "id": 21,
-                    "name": "Receitas Não Operacionais",
-                    "description": null,
-                    "parent_id": 20,
-                    "type": 1,
-                    "created_at": "2025-09-10T20:07:52.000000Z",
-                    "updated_at": "2025-09-10T20:07:52.000000Z",
-                    "deleted_at": null,
-                    "total": 0,
-                    "children": []
-                },
-                {
-                    "id": 22,
-                    "name": "Despesas Não Operacionais",
-                    "description": null,
-                    "parent_id": 20,
-                    "type": 2,
-                    "created_at": "2025-09-10T20:07:52.000000Z",
-                    "updated_at": "2025-09-10T20:07:52.000000Z",
-                    "deleted_at": null,
-                    "total": 0,
-                    "children": []
-                }
-            ]
-        },
-        "1": {
-            "id": 6,
-            "name": "Custos da Mercadoria/Serviço Vendido (CMV/CSV)",
-            "description": null,
-            "parent_id": null,
-            "type": 2,
-            "created_at": "2025-09-10T20:07:52.000000Z",
-            "updated_at": "2025-09-10T20:07:52.000000Z",
-            "deleted_at": null,
-            "total": -355987.02,
-            "children": [
-                {
-                    "id": 7,
-                    "name": "Compras de Mercadorias",
-                    "description": null,
-                    "parent_id": 6,
-                    "type": null,
-                    "created_at": "2025-09-10T20:07:52.000000Z",
-                    "updated_at": "2025-09-10T20:07:52.000000Z",
-                    "deleted_at": null,
-                    "total": 0,
-                    "children": []
-                },
-                {
-                    "id": 8,
-                    "name": "Custos de Produção",
-                    "description": null,
-                    "parent_id": 6,
-                    "type": 2,
-                    "created_at": "2025-09-10T20:07:52.000000Z",
-                    "updated_at": "2025-09-10T20:07:52.000000Z",
-                    "deleted_at": null,
-                    "total": 0,
-                    "children": []
-                }
-            ]
-        },
-        "2": {
-            "id": 9,
-            "name": "Despesas Operacionais",
-            "description": null,
-            "parent_id": null,
-            "type": 2,
-            "created_at": "2025-09-10T20:07:52.000000Z",
-            "updated_at": "2025-09-10T20:07:52.000000Z",
-            "deleted_at": null,
-            "total": 0,
-            "children": [
-                {
-                    "id": 10,
-                    "name": "Despesas com Vendas",
-                    "description": null,
-                    "parent_id": 9,
-                    "type": 2,
-                    "created_at": "2025-09-10T20:07:52.000000Z",
-                    "updated_at": "2025-09-10T20:07:52.000000Z",
-                    "deleted_at": null,
-                    "total": 0,
-                    "children": [
-                        {
-                            "id": 11,
-                            "name": "Comissões",
-                            "description": null,
-                            "parent_id": 10,
-                            "type": null,
-                            "created_at": "2025-09-10T20:07:52.000000Z",
-                            "updated_at": "2025-09-10T20:07:52.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        },
-                        {
-                            "id": 12,
-                            "name": "Propaganda e Publicidade",
-                            "description": null,
-                            "parent_id": 10,
-                            "type": null,
-                            "created_at": "2025-09-10T20:07:52.000000Z",
-                            "updated_at": "2025-09-10T20:07:52.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        }
-                    ]
-                },
-                {
-                    "id": 13,
-                    "name": "Despesas Administrativas",
-                    "description": null,
-                    "parent_id": 9,
-                    "type": 2,
-                    "created_at": "2025-09-10T20:07:52.000000Z",
-                    "updated_at": "2025-09-10T20:07:52.000000Z",
-                    "deleted_at": null,
-                    "total": 0,
-                    "children": [
-                        {
-                            "id": 14,
-                            "name": "Salários e Encargos Sociais",
-                            "description": null,
-                            "parent_id": 13,
-                            "type": null,
-                            "created_at": "2025-09-10T20:07:52.000000Z",
-                            "updated_at": "2025-09-10T20:07:52.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        },
-                        {
-                            "id": 15,
-                            "name": "Aluguel",
-                            "description": null,
-                            "parent_id": 13,
-                            "type": null,
-                            "created_at": "2025-09-10T20:07:52.000000Z",
-                            "updated_at": "2025-09-10T20:07:52.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        },
-                        {
-                            "id": 16,
-                            "name": "Energia Elétrica",
-                            "description": null,
-                            "parent_id": 13,
-                            "type": null,
-                            "created_at": "2025-09-10T20:07:52.000000Z",
-                            "updated_at": "2025-09-10T20:07:52.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        }
-                    ]
-                },
-                {
-                    "id": 17,
-                    "name": "Despesas Financeiras",
-                    "description": null,
-                    "parent_id": 9,
-                    "type": 2,
-                    "created_at": "2025-09-10T20:07:52.000000Z",
-                    "updated_at": "2025-09-10T20:07:52.000000Z",
-                    "deleted_at": null,
-                    "total": 0,
-                    "children": [
-                        {
-                            "id": 18,
-                            "name": "Juros Passivos",
-                            "description": null,
-                            "parent_id": 17,
-                            "type": null,
-                            "created_at": "2025-09-10T20:07:52.000000Z",
-                            "updated_at": "2025-09-10T20:07:52.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        },
-                        {
-                            "id": 19,
-                            "name": "Variações Monetárias Passivas",
-                            "description": null,
-                            "parent_id": 17,
-                            "type": null,
-                            "created_at": "2025-09-10T20:07:52.000000Z",
-                            "updated_at": "2025-09-10T20:07:52.000000Z",
-                            "deleted_at": null,
-                            "total": 0,
-                            "children": []
-                        }
-                    ]
-                }
-            ]
-        }
-    }
+interface DREApiResponse {
+  dre_tree: DRENode[];
+  receita_bruta: number;
+  deducoes: number;
+  receita_liquida: number;
+  cmv_csv: number;
+  lucro_bruto: number;
+  despesas_operacionais: number;
+  lucro_operacional: number;
+  outras_receitas_despesas: number;
+  lucro_liquido: number;
+  margem_bruta: number;
+  margem_operacional: number;
+  margem_liquida: number;
 }
 
 const formatCurrencyBRL = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
@@ -369,7 +56,7 @@ const getValueClass = (key: string, value: number) => {
     return 'text-muted-foreground'
   }
   if (value < 0) return 'text-red-600'
-  if (value > 0) return 'text-emerald-700'
+  if (value > 0) return 'text-green-600'
   return 'text-muted-foreground'
 }
 
@@ -387,7 +74,19 @@ const formatKeyLabel = (key: string) => {
       margem_bruta: 'Margem Bruta',
       margem_operacional: 'Margem Operacional',
       margem_liquida: 'Margem Líquida'
-    }
+    };
+    // const icons: Record<string, React.ElementType> = {
+    //   receita_bruta: TrendingUp,
+    //   deducoes: TrendingDown,
+    //   receita_liquida: CheckCircle,
+    //   cmv_csv: TrendingDown,
+    //   lucro_bruto: Target,
+    //   despesas_operacionais: TrendingDown,
+    //   lucro_operacional: Target,
+    //   outras_receitas_despesas: BarChart,
+    //   lucro_liquido: CheckCircle,
+    //   margem_bruta: PieChart, margem_operacional: PieChart, margem_liquida: PieChart,
+    // }
     return labels[key] || key
   }
 
@@ -396,13 +95,12 @@ export function TreeRow({ node, level = 0 }: { node: DRENode, level?: number }) 
   const hasChildren = node.children && node.children.length > 0
   const paddingLeft = 12 + level * 16
   const isExpense = node.type === 2
-  const isEntry = node.type === 1
   const valueClass = isExpense
     ? 'text-red-600'
     : node.total < 0
       ? 'text-red-600'
       : node.total > 0
-        ? 'text-emerald-700'
+        ? 'text-green-600'
         : 'text-green-600'       
 
   return (
@@ -416,7 +114,7 @@ export function TreeRow({ node, level = 0 }: { node: DRENode, level?: number }) 
           ) : (
             <span className="inline-block w-6" />
           )}
-          <span className={`text-sm font-medium ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+          <span className={`text-sm ${level === 0 ? 'font-semibold' : 'font-medium'}`}>
             {isExpense ? '(-) ' : '(+) '}{node.name}
           </span>
         </div>
@@ -433,23 +131,181 @@ export function TreeRow({ node, level = 0 }: { node: DRENode, level?: number }) 
   )
 }
 
-export function DRE() {
-  const data = useMemo(() => Object.values(MOCK_DRE.dre), [])
-  const summary = useMemo(() => MOCK_DRE.summary, [])
+// Componente de Tooltip customizado para o gráfico
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="p-2 text-sm bg-background/95 border border-border rounded-lg shadow-lg backdrop-blur-sm">
+        <p className="font-bold mb-1">{label}</p>
+        {payload.map((p: any, index: number) => (
+          <div key={index} className="flex items-center justify-between">
+            <span style={{ color: p.color }}>{p.name}:</span>
+            <span className="font-semibold ml-4">{formatCurrencyBRL(p.value)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
+export function DRE() {
+  const { selectedCompany } = useCompanies();
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [period, setPeriod] = useState('month');
+  // Estados para o período de comparação
+  const [prevStartDate, setPrevStartDate] = useState(format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'));
+  const [prevEndDate, setPrevEndDate] = useState(format(endOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'));
+  const [focusBar, setFocusBar] = useState<string | null>(null);
+
+
+  const { data: dreData, isLoading, isError, error } = useQuery<DREApiResponse>({
+    queryKey: ['dre', selectedCompany?.id, startDate, endDate],
+    queryFn: () => getDre(startDate, endDate, selectedCompany!.id),
+    enabled: !!selectedCompany?.id,
+    staleTime: 1000 * 60, // 1 minuto de cache
+  });
+
+  const { data: prevDreData, isLoading: isLoadingPrev } = useQuery<DREApiResponse>({
+    queryKey: ['dre', selectedCompany?.id, prevStartDate, prevEndDate],
+    queryFn: () => getDre(prevStartDate, prevEndDate, selectedCompany!.id),
+    enabled: !!selectedCompany?.id,
+    staleTime: 1000 * 60,
+  });
+
+  const handlePeriodChange = (selectedPeriod: string) => {
+    setPeriod(selectedPeriod);
+    if (selectedPeriod !== 'custom') {
+      const now = new Date();
+      let currentStart, currentEnd, prevStart, prevEnd;
+
+      switch (selectedPeriod) {
+        case 'quarter':
+          currentStart = startOfQuarter(now);
+          currentEnd = endOfQuarter(now);
+          prevStart = startOfQuarter(subQuarters(now, 1));
+          prevEnd = endOfQuarter(subQuarters(now, 1));
+          break;
+        case 'semester':
+          const currentMonth = now.getMonth(); // 0-11
+          if (currentMonth < 6) {
+            currentStart = startOfYear(now);
+            currentEnd = endOfMonth(subMonths(startOfYear(now), -5)); // Fim de Junho
+            prevStart = startOfYear(subYears(now, 1));
+            prevEnd = endOfMonth(subMonths(startOfYear(subYears(now, 1)), -5));
+          } else {
+            currentStart = startOfMonth(subMonths(startOfYear(now), -6)); // Início de Julho
+            currentEnd = endOfYear(now);
+            prevStart = startOfMonth(subMonths(startOfYear(subYears(now, 1)), -6));
+            prevEnd = endOfYear(subYears(now, 1));
+          }
+          break;
+        case 'year':
+          currentStart = startOfYear(now);
+          currentEnd = endOfYear(now);
+          prevStart = startOfYear(subYears(now, 1));
+          prevEnd = endOfYear(subYears(now, 1));
+          break;
+        case 'month':
+        default:
+          currentStart = startOfMonth(now);
+          currentEnd = endOfMonth(now);
+          prevStart = startOfMonth(subMonths(now, 1));
+          prevEnd = endOfMonth(subMonths(now, 1));
+          break;
+      }
+      setStartDate(format(currentStart, 'yyyy-MM-dd'));
+      setEndDate(format(currentEnd, 'yyyy-MM-dd'));
+      setPrevStartDate(format(prevStart, 'yyyy-MM-dd'));
+      setPrevEndDate(format(prevEnd, 'yyyy-MM-dd'));
+    }
+  };
+
+  const isComponentLoading = isLoading || isLoadingPrev;
+  const hasData = !isComponentLoading && !isError && dreData && dreData.dre_tree.length > 0;
+  const noData = !isComponentLoading && !isError && (!dreData || dreData.dre_tree.length === 0);
+
+  const getSummaryIcon = (key: string) => {
+    const icons: Record<string, React.ElementType> = {
+      receita_bruta: TrendingUp, deducoes: TrendingDown, receita_liquida: CheckCircle,
+      cmv_csv: TrendingDown, lucro_bruto: Target, despesas_operacionais: TrendingDown,
+      lucro_operacional: Target, outras_receitas_despesas: BarChart, lucro_liquido: CheckCircle,
+      margem_bruta: PieChart, margem_operacional: PieChart, margem_liquida: PieChart,
+    };
+    return icons[key] || Scale;
+  };
+
+  const chartData = hasData ? [
+    { name: 'Receita Bruta', atual: dreData.receita_bruta, anterior: prevDreData?.receita_bruta ?? 0 },
+    { name: 'CMV/CSV', atual: Math.abs(dreData.cmv_csv), anterior: Math.abs(prevDreData?.cmv_csv ?? 0) },
+    { name: 'Despesas', atual: Math.abs(dreData.despesas_operacionais), anterior: Math.abs(prevDreData?.despesas_operacionais ?? 0) },
+    { name: 'Lucro Líquido', atual: dreData.lucro_liquido, anterior: prevDreData?.lucro_liquido ?? 0 },
+  ] : [];
+
+  const calculateVariation = (current: number, previous: number) => {
+    if (previous === 0) {
+      return current > 0 ? Infinity : (current < 0 ? -Infinity : 0);
+    }
+    return ((current - previous) / Math.abs(previous)) * 100;
+  };
+
+  const renderVariation = (variation: number) => {
+    if (variation === Infinity) return <span className="text-green-600 flex items-center"><ArrowUp className="h-3 w-3 mr-1" /> Novo</span>;
+    if (variation === -Infinity) return <span className="text-red-600 flex items-center"><ArrowDown className="h-3 w-3 mr-1" /> Novo</span>;
+    return <span className={`flex items-center ${variation > 0 ? 'text-green-600' : variation < 0 ? 'text-red-600' : 'text-muted-foreground'}`}>{variation > 0 ? <ArrowUp className="h-3 w-3 mr-1" /> : variation < 0 ? <ArrowDown className="h-3 w-3 mr-1" /> : <Minus className="h-3 w-3 mr-1" />}{Math.abs(variation).toFixed(1)}%</span>;
+  };
   return (
     <div className="space-y-6">
       <div className="flex items-baseline justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">DRE Gerencial</h1>
-          <p className="text-muted-foreground">Visualização hierárquica das contas e totais</p>
+          <p className="text-muted-foreground">Demonstração do Resultado do Exercício</p>
         </div>
       </div>
 
       <Card>
+        <CardHeader><CardTitle className="flex items-center"><Filter className="h-5 w-5 mr-2" /> Filtros</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div className="md:col-span-1">
+              <Select onValueChange={handlePeriodChange} value={period}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="month">Este Mês</SelectItem>
+                  <SelectItem value="quarter">Este Trimestre</SelectItem>
+                  <SelectItem value="semester">Este Semestre</SelectItem>
+                  <SelectItem value="year">Este Ano</SelectItem>
+                  <SelectItem value="custom">Período Customizado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {period === 'custom' && (
+              <div className="md:col-span-2">
+                <DateRangeFilter
+                  startDate={startDate}
+                  endDate={endDate}
+                  onFilter={(start, end) => {
+                    setStartDate(start);
+                    setEndDate(end);
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Estrutura da DRE</CardTitle></CardHeader>
         <CardContent>
           <div className="divide-y divide-border">
-            {data.map(root => (
+            {isComponentLoading && <Skeleton className="h-64 w-full" />}
+            {isError && <p className="text-destructive p-4 flex items-center gap-2"><AlertCircle className="h-5 w-5" /> Erro ao carregar DRE: {error.message}</p>}
+            {noData && <p className="text-muted-foreground p-4 flex items-center gap-2"><Info className="h-5 w-5" /> Nenhum dado encontrado para o período e empresa selecionados.</p>}
+            {hasData && dreData.dre_tree.map(root => (
               <div key={root.id} className="py-2">
                 <TreeRow node={root} />
               </div>
@@ -463,8 +319,39 @@ export function DRE() {
           <CardTitle>Resumo</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(
+          {hasData && (
+            <div className="h-80 mb-8 -ml-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsBarChart 
+                  data={chartData}
+                  onMouseMove={(state) => {
+                    if (state.isTooltipActive) {
+                      setFocusBar(state.activeTooltipIndex as any);
+                    } else {
+                      setFocusBar(null);
+                    }
+                  }}
+                  onMouseLeave={() => setFocusBar(null)}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${(Number(value) / 1000).toLocaleString()}k`} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--accent))' }} />
+                  <Legend verticalAlign="top" iconSize={10} />
+                  <Bar dataKey="anterior" name="Período Anterior" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} opacity={focusBar !== null ? 0.5 : 1} />
+                  <Bar dataKey="atual" name="Período Atual" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} opacity={focusBar !== null ? 0.5 : 1}>
+                    {chartData.map((_entry, index) => (
+                      <Cell key={`cell-${index}`} fill="hsl(var(--primary))" opacity={focusBar === null || focusBar === index.toString() ? 1 : 0.5} />
+                    ))}
+                  </Bar>
+                </RechartsBarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {isComponentLoading && Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+            {hasData &&
+            (
               [
                 'receita_bruta',
                 'deducoes',
@@ -478,16 +365,25 @@ export function DRE() {
                 'margem_bruta',
                 'margem_operacional',
                 'margem_liquida'
-              ] as Array<keyof typeof summary>
-            ).filter((k) => k in summary).map((key) => {
-              const value = summary[key] as number
+              ] as Array<keyof DREApiResponse>
+            ).filter((k) => k in dreData).map((key) => {
+              const value = dreData[key] as number;
+              const prevValue = prevDreData?.[key] as number | undefined;
+              const variation = prevValue !== undefined ? calculateVariation(value, prevValue) : null;
+              const Icon = getSummaryIcon(key);
               return (
-                <div key={key} className="rounded-md border border-border p-4 bg-card">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                    {formatKeyLabel(key)}
+                <div key={key} className="rounded-lg border border-border p-4 bg-card flex flex-col justify-between">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {formatKeyLabel(key)}
+                    </div>
+                    <Icon className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div className={`text-xl font-semibold tabular-nums ${getValueClass(key, value)}`}>
-                    {formatSummaryValue(key, value)}
+                  <div>
+                    <div className={`text-2xl font-bold tabular-nums ${getValueClass(key, value)}`}>
+                      {formatSummaryValue(key, value)}
+                    </div>
+                    {variation !== null && <div className="text-xs text-muted-foreground">{renderVariation(variation)}</div>}
                   </div>
                 </div>
               )

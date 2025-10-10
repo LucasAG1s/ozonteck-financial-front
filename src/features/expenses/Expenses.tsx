@@ -1,411 +1,429 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Plus, Search, Filter, Download } from 'lucide-react'
-import { formatCurrency, formatDate } from '@/lib/utils'
-import { toast } from 'react-toastify'
 
-interface Saida {
-  id: string
-  fornecedor: string
-  categoria: string
-  descricao: string
-  valor: number
-  data: Date
-  formaPagamento: string
-  banco: string
-  cnpj: string
-  anexo?: string
-}
+import { useState, useMemo } from 'react';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableFooter as ShadcnTableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Label } from '@/components/ui/label';
+import { Plus, Search, Filter, Edit, Trash2, Download } from 'lucide-react';
+import { formatCurrency, formatDate, formatBankAccount } from '@/lib/utils';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { toast } from 'react-toastify';
+import { Expense, getExpenses, createExpense, updateExpense, UpdateExpensePayload, deleteExpense, uploadFile } from '@/lib/services/finance/expenses.service';
+import { getAccountPlans, AccountPlan } from '@/lib/services/finance/account-plan.service';
+import { getBanksAccount, BankAccount } from '@/lib/services/finance/banks.service';
+import { getSuppliers, Supplier } from '@/lib/services/finance/supllier.service';
+import { PaymentMethod,getPaymentMethods } from '@/lib/services/finance/payment-methods.service';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCompanies } from '@/hooks/useCompanies';
+import { DateRangeFilter } from '@/components/ui/dateRangeFilter';
+import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm';
+import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog';
 
-const saidasIniciais: Saida[] = [
-  {
-    id: '1',
-    fornecedor: 'Fornecedor ABC Ltda',
-    categoria: 'Fornecedores',
-    descricao: 'Compra de matéria-prima - NF 12345',
-    valor: 3500.00,
-    data: new Date('2024-01-15'),
-    formaPagamento: 'Transferência',
-    banco: 'Banco do Brasil',
-    cnpj: '12.345.678/0001-90',
-    anexo: 'nota_fiscal_12345.pdf'
-  },
-  {
-    id: '2',
-    fornecedor: 'João Silva',
-    categoria: 'Salários',
-    descricao: 'Salário Janeiro 2024 - João Silva',
-    valor: 4500.00,
-    data: new Date('2024-01-05'),
-    formaPagamento: 'PIX',
-    banco: 'Itaú',
-    cnpj: '12.345.678/0001-90'
-  },
-  {
-    id: '3',
-    fornecedor: 'Receita Federal',
-    categoria: 'Impostos',
-    descricao: 'DARF - Imposto de Renda PJ',
-    valor: 2800.00,
-    data: new Date('2024-01-10'),
-    formaPagamento: 'Débito Automático',
-    banco: 'Santander',
-    cnpj: '98.765.432/0001-10',
-    anexo: 'darf_janeiro_2024.pdf'
-  }
-]
+const MAX_FILE_SIZE_MB = 5;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const expenseSchema = z.object({
+  description: z.string().min(3, 'A descrição é obrigatória.'),
+  amount: z.coerce.string().min(1, 'O valor é obrigatório.'),
+  expense_date: z.string().min(1, 'A data é obrigatória.'),
+  company_id: z.coerce.number().min(1, 'A empresa é obrigatória.'),
+  supplier_id: z.coerce.number().min(1, 'O fornecedor é obrigatório.'),
+  payment_method_id:z.coerce.number().min(1, 'O método de pagamento é obrigatório.'),
+  account_plan_id: z.coerce.number({ invalid_type_error: 'O plano de contas é obrigatório.' })
+    .nullable()
+    .refine(val => val !== null && val >= 1, { message: 'O plano de contas é obrigatório.' }),
+  bank_account_id: z.coerce.number().min(1, 'A conta bancária é obrigatória.'),
+  file_path: z.any()
+    .transform((value) => {
+      if (value instanceof FileList) return value[0] || null; 
+      return value;
+    })
+    .refine(
+      (file) => !(file instanceof File) || file.size <= MAX_FILE_SIZE_BYTES,
+      `O tamanho máximo do arquivo é de ${MAX_FILE_SIZE_MB}MB.`
+    )
+    .optional().nullable(),
+});
 
 export function Expenses() {
-  const [saidas, setSaidas] = useState<Saida[]>(saidasIniciais)
-  const [busca, setBusca] = useState('')
-  const [filtroCategoria, setFiltroCategoria] = useState('')
-  const [filtroData, setFiltroData] = useState('')
-  const [filtroCNPJ, setFiltroCNPJ] = useState('')
-  const [modalAberto, setModalAberto] = useState(false)
+  const queryClient = useQueryClient();
 
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
 
-  const [formData, setFormData] = useState({
-    fornecedor: '',
-    categoria: 'Fornecedores',
-    descricao: '',
-    valor: '',
-    formaPagamento: 'PIX',
-    banco: 'Banco do Brasil',
-    cnpj: '12.345.678/0001-90'
-  })
+  const { selectedCompany } = useCompanies();
 
-  const [anexo, setAnexo] = useState<File | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [bankAccountFilter, setBankAccountFilter] = useState('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 50;
 
-  const saidasFiltradas = saidas.filter(saida => {
-    const matchBusca = saida.fornecedor.toLowerCase().includes(busca.toLowerCase()) ||
-                      saida.descricao.toLowerCase().includes(busca.toLowerCase())
-    const matchCategoria = !filtroCategoria || saida.categoria === filtroCategoria
-    const matchData = !filtroData || saida.data.toISOString().split('T')[0] >= filtroData
-    const matchCNPJ = !filtroCNPJ || saida.cnpj.includes(filtroCNPJ)
-    
-    return matchBusca && matchCategoria && matchData && matchCNPJ
-  })
+  const { data: expenses = [], isLoading: isLoadingExpenses } = useQuery<Expense[]>({
+    queryKey: ['expenses', selectedCompany?.id, startDate, endDate],
+    queryFn: () => getExpenses(startDate, endDate, String(selectedCompany?.id)),
+    staleTime: 1000 * 60, // 1 minuto
+    enabled: !!selectedCompany?.id,
+  });
 
-  const totalSaidas = saidasFiltradas.reduce((sum, saida) => sum + saida.valor, 0)
+  const { companies, loading: isLoadingCompanies } = useCompanies();
+  const { data: accountPlans = [], isLoading: isLoadingPlans } = useQuery<AccountPlan[]>({
+    queryKey: ['accountPlans'],
+    queryFn: getAccountPlans,
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
+  const { data: bankAccounts = [], isLoading: isLoadingBanks } = useQuery<BankAccount[]>({
+    queryKey: ['bankAccounts', selectedCompany?.id],
+    queryFn: () => getBanksAccount(selectedCompany!.id),
+    enabled: !!selectedCompany?.id,
+    staleTime: 1000 * 60 * 3,
+    refetchOnWindowFocus: false,
+  });
+  const { data: suppliers = [], isLoading: isLoadingSuppliers } = useQuery<Supplier[]>({
+     queryKey: ['suppliers'], 
+     queryFn: getSuppliers,
+     staleTime: 1000 * 60 * 5, // 5 minutos
+     refetchOnWindowFocus: false,
+     });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    const novaSaida: Saida = {
-      id: Date.now().toString(),
-      fornecedor: formData.fornecedor,
-      categoria: formData.categoria,
-      descricao: formData.descricao,
-      valor: parseFloat(formData.valor),
-      data: new Date(),
-      formaPagamento: formData.formaPagamento,
-      banco: formData.banco,
-      cnpj: formData.cnpj,
-      anexo: anexo?.name
+  const { data: paymentMethod = [], isLoading: isLoadingPaymentMethod } = useQuery<PaymentMethod[]>({
+    queryKey: ['paymentMethod'],
+    queryFn: getPaymentMethods,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    refetchOnWindowFocus: false,
+  }); 
+
+  const { mutate: uploadFileMutation, isPending: isUploading } = useMutation({
+    mutationFn: uploadFile,
+    onError: (error: Error) => toast.error(`Erro no upload: ${error.message}`),
+  });
+
+  const { mutate: createExpenseMutation, isPending: isCreating } = useMutation({
+    mutationFn: createExpense,
+    onSuccess: () => {
+      toast.success("Nova despesa registrada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      setIsModalOpen(false);
+    },
+    onError: (error: Error) => toast.error(`Erro ao criar despesa: ${error.message}`),
+  });
+
+  const { mutate: updateExpenseMutation, isPending: isUpdating } = useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: UpdateExpensePayload }) => updateExpense(id, payload),
+    onSuccess: () => {
+      toast.success("Despesa atualizada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      setIsModalOpen(false);
+      setExpenseToEdit(null);
+    },
+    onError: (error: Error) => toast.error(`Erro ao atualizar despesa: ${error.message}`),
+  });
+
+  const { mutate: deleteExpenseMutation, isPending: isDeleting } = useMutation({
+    mutationFn: deleteExpense,
+    onSuccess: () => {
+      toast.success("Despesa excluída com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      setIsAlertOpen(false);
+      setExpenseToDelete(null);
+    },
+    onError: (error: Error) => toast.error(`Erro ao excluir despesa: ${error.message}`),
+  });
+
+  const handleFormSubmit = (data: z.infer<typeof expenseSchema>) => {
+    const processSubmit = (filePathUrl?: string | null) => {
+      const payload = {
+        ...data,
+
+        account_plan_id: data.account_plan_id as number,
+        file_path: filePathUrl ?? (expenseToEdit?.file_path ?? ''),
+      };
+
+      if (expenseToEdit) {
+        updateExpenseMutation({ id: expenseToEdit.id, payload: payload });
+      } else {
+        createExpenseMutation(payload);
+      }
+    };
+
+    if (data.file_path instanceof File) {
+      uploadFileMutation(data.file_path, {
+        onSuccess: (uploadResponse) => {
+          processSubmit(uploadResponse.url);
+        },
+      });
+    } else {
+      processSubmit(data.file_path);
     }
-    
-    setSaidas([novaSaida, ...saidas])
-    toast.success("Nova saída foi registrada com sucesso.")
-    
-    setModalAberto(false)
-    setFormData({
-      fornecedor: '',
-      categoria: 'Fornecedores',
-      descricao: '',
-      valor: '',
-      formaPagamento: 'PIX',
-      banco: 'Banco do Brasil',
-      cnpj: '12.345.678/0001-90'
-    })
-    setAnexo(null)
-  }
+  };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setAnexo(e.target.files[0])
+  const handleOpenNewModal = () => {
+    setExpenseToEdit(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEditClick = (expense: Expense) => {
+    const formattedExpense = {
+      ...expense,
+      expense_date: expense.expense_date ? format(new Date(expense.expense_date), "yyyy-MM-dd'T'HH:mm") : '',
+    };
+    setExpenseToEdit(formattedExpense as any);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteClick = (id: number) => {
+    setExpenseToDelete(id);
+    setIsAlertOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (expenseToDelete !== null) {
+      deleteExpenseMutation(expenseToDelete);
     }
-  }
+  };
+
+  const filteredExpenses = useMemo(() => {
+    if (!expenses) return [];
+    return expenses.filter(e => {
+      const matchesSearch = e.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesBankAccount = !bankAccountFilter || String(e.bank_account_id) === bankAccountFilter;
+      const matchesPaymentMethod = !paymentMethodFilter || String(e.payment_method_id) === paymentMethodFilter;
+      const matchesSupplier = !supplierFilter || String(e.supplier_id) === supplierFilter;
+      return matchesSearch && matchesPaymentMethod && matchesBankAccount && matchesSupplier;
+    });
+  }, [expenses, searchTerm, bankAccountFilter, supplierFilter, paymentMethodFilter]);
+
+  const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+  const paginatedExpenses = useMemo(() => {
+    return filteredExpenses.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  }, [filteredExpenses, currentPage]);
+
+  const totalPages = Math.ceil(filteredExpenses.length / ITEMS_PER_PAGE);
+
+  const formFields: FormFieldConfig<typeof expenseSchema>[] = [
+    { name: 'description', label: 'Descrição', type: 'text', placeholder: 'Ex: Compra de material', gridCols: 2 },
+    { name: 'amount', label: 'Valor', type: 'number', placeholder: '0,00', step: "0.01", gridCols: 1 },
+    { name: 'expense_date', label: 'Data da Despesa', type: 'datetime-local', gridCols: 1 },
+    {
+      name: 'company_id',
+      label: 'Empresa (CNPJ)',
+      type: 'select',
+      placeholder: 'Selecione uma empresa',
+      options: companies.map(c => ({ value: c.id, label: `${c.corporate_name} (${c.cnpj})` })),
+      gridCols: 1,
+    },
+    {
+      name: 'supplier_id',
+      label: 'Fornecedor',
+      type: 'select',
+      placeholder: 'Selecione um fornecedor',
+      options: suppliers.map(s => ({ value: s.id, label: s.name })),
+      gridCols: 1,
+    },
+    {
+      name: 'account_plan_id',
+      label: 'Plano de Contas',
+      type: 'select',
+      placeholder: 'Selecione um plano',
+      options: [
+        { value: 'null', label: 'Selecione um plano' },
+        ...accountPlans.filter(p => p.type === 2 && p.parent_id != null).map(p => ({ value: p.id, label: `${p.name} (${p.id})` }))
+      ],
+      gridCols: 1,
+    },
+    {
+      name: 'payment_method_id',
+      label: 'Método de Pagamento',
+      type: 'select',
+      placeholder: 'Selecione um método',
+      options: [
+        { value: 'null', label: 'Selecione um método' },
+        ...paymentMethod.map(p => ({ value: p.id, label: p.name }))
+      ],
+      gridCols: 1,
+    },
+    {
+      name: 'bank_account_id',
+      label: 'Conta Bancária (Origem do Pagamento)',
+      type: 'select',
+      placeholder: 'Selecione uma conta',
+      options: bankAccounts.map(b => ({ value: b.id, label: b.bank_name + ' ( ' + formatBankAccount(b.account) + ' )' })),
+      gridCols: 1,
+    },
+    { name: 'file_path', label: 'Anexo (NF, Comprovante)', type: 'file' ,accept:'.pdf,.png,.jpg,.jpeg', gridCols: 2 },
+  ];
+
+  const isLoading = isLoadingExpenses || isLoadingCompanies || isLoadingPlans || isLoadingPaymentMethod || isLoadingBanks || isLoadingSuppliers;
+  if (isLoading) return <div className="space-y-4"><Skeleton className="h-24 w-full" /><Skeleton className="h-96 w-full" /></div>;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Saídas</h1>
-        <p className="text-muted-foreground">Gerencie as despesas e saídas financeiras</p>
+          <h1 className="text-3xl font-bold text-foreground">Despesas</h1>
+          <p className="text-muted-foreground">Gerencie as despesas e saídas financeiras</p>
         </div>
-        
-        <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Saída
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Nova Saída</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="fornecedor">Fornecedor</Label>
-                <Input
-                  id="fornecedor"
-                  value={formData.fornecedor}
-                  onChange={(e) => setFormData({...formData, fornecedor: e.target.value})}
-                  placeholder="Nome do fornecedor ou beneficiário"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="categoria">Categoria</Label>
-                <select
-                  id="categoria"
-                  value={formData.categoria}
-                  onChange={(e) => setFormData({...formData, categoria: e.target.value})}
-                  className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md"
-                >
-                  <option value="Fornecedores">Fornecedores</option>
-                  <option value="Salários">Salários</option>
-                  <option value="Impostos">Impostos</option>
-                  <option value="Aluguel">Aluguel</option>
-                  <option value="Utilities">Utilities</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Outros">Outros</option>
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="descricao">Descrição</Label>
-                <Input
-                  id="descricao"
-                  value={formData.descricao}
-                  onChange={(e) => setFormData({...formData, descricao: e.target.value})}
-                  placeholder="Descrição detalhada da despesa"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="valor">Valor</Label>
-                <Input
-                  id="valor"
-                  type="number"
-                  step="0.01"
-                  value={formData.valor}
-                  onChange={(e) => setFormData({...formData, valor: e.target.value})}
-                  placeholder="0,00"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="formaPagamento">Forma de Pagamento</Label>
-                  <select
-                    id="formaPagamento"
-                    value={formData.formaPagamento}
-                    onChange={(e) => setFormData({...formData, formaPagamento: e.target.value})}
-                    className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md"
-                  >
-                    <option value="PIX">PIX</option>
-                    <option value="Transferência">Transferência</option>
-                    <option value="Débito Automático">Débito Automático</option>
-                    <option value="Boleto">Boleto</option>
-                    <option value="Cartão de Crédito">Cartão de Crédito</option>
-                    <option value="Dinheiro">Dinheiro</option>
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="banco">Banco</Label>
-                  <select
-                    id="banco"
-                    value={formData.banco}
-                    onChange={(e) => setFormData({...formData, banco: e.target.value})}
-                    className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md"
-                  >
-                    <option value="Banco do Brasil">Banco do Brasil</option>
-                    <option value="Itaú">Itaú</option>
-                    <option value="Santander">Santander</option>
-                    <option value="Bradesco">Bradesco</option>
-                    <option value="Caixa">Caixa</option>
-                    <option value="Nubank">Nubank</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="cnpj">CNPJ</Label>
-                <select
-                  id="cnpj"
-                  value={formData.cnpj}
-                  onChange={(e) => setFormData({...formData, cnpj: e.target.value})}
-                  className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md"
-                >
-                  <option value="12.345.678/0001-90">Empresa Principal LTDA</option>
-                  <option value="98.765.432/0001-10">Filial Norte LTDA</option>
-                  <option value="11.222.333/0001-44">Filial Sul LTDA</option>
-                </select>
-              </div>
-              <div>
-                <Label htmlFor="anexo">Anexo (Nota Fiscal, Comprovante)</Label>
-                <Input
-                  id="anexo"
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={handleFileChange}
-                  className="cursor-pointer"
-                />
-                {anexo && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Arquivo selecionado: {anexo.name}
-                  </p>
-                )}
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setModalAberto(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  Cadastrar
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={handleOpenNewModal}><Plus className="h-4 w-4 mr-2" /> Nova Despesa</Button>
       </div>
 
-      {/* Filtros */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Filter className="h-5 w-5 mr-2" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="flex items-center"><Filter className="h-5 w-5 mr-2" /> Filtros</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
             <div>
-              <Label htmlFor="busca">Buscar</Label>
+              <Label htmlFor="busca">Buscar por descrição</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="busca"
-                  placeholder="Buscar por fornecedor ou descrição..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10"
-                />
+                <Input id="busca" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
               </div>
             </div>
             <div>
-              <Label htmlFor="filtroCategoria">Categoria</Label>
-              <select
-                id="filtroCategoria"
-                value={filtroCategoria}
-                onChange={(e) => setFiltroCategoria(e.target.value)}
-                className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md"
-              >
-                <option value="">Todas as categorias</option>
-                <option value="Fornecedores">Fornecedores</option>
-                <option value="Salários">Salários</option>
-                <option value="Impostos">Impostos</option>
-                <option value="Aluguel">Aluguel</option>
-                <option value="Utilities">Utilities</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Outros">Outros</option>
-              </select>
+              <Label htmlFor="supplierFilter">Fornecedor</Label>
+              <Select onValueChange={(value) => setSupplierFilter(value === "all" ? "" : value)} value={supplierFilter || "all"}>
+                <SelectTrigger><SelectValue placeholder="Todos os fornecedores" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os fornecedores</SelectItem>
+                  {suppliers.map(s => (<SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <Label htmlFor="filtroData">Data (a partir de)</Label>
-              <Input
-                id="filtroData"
-                type="date"
-                value={filtroData}
-                onChange={(e) => setFiltroData(e.target.value)}
+              <Label htmlFor="bankAccountFilter">Conta</Label>
+              <Select onValueChange={(value) => setBankAccountFilter(value === "all" ? "" : value)} value={bankAccountFilter || "all"}>
+                <SelectTrigger><SelectValue placeholder="Todas as contas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as contas</SelectItem>
+                  {bankAccounts.map(account => (
+                    <SelectItem key={account.id} value={String(account.id)}>{account.bank_name} ({formatBankAccount(account.account)})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="paymentMethodFilter">Método de Pagamento</Label>
+              <Select onValueChange={(value) => setPaymentMethodFilter(value === "all" ? "" : value)} value={paymentMethodFilter || "all"}>
+                  <SelectTrigger><SelectValue placeholder="Todos os métodos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os métodos</SelectItem> 
+                    {paymentMethod.map(method => (
+                      <SelectItem key={method.id} value={String(method.id)}>{method.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Período</Label>
+              <DateRangeFilter
+                startDate={startDate}
+                endDate={endDate}
+                onFilter={(start, end) => { setStartDate(start); setEndDate(end); }}
               />
             </div>
-            <div>
-              <Label htmlFor="filtroCNPJ">CNPJ</Label>
-              <select
-                id="filtroCNPJ"
-                value={filtroCNPJ}
-                onChange={(e) => setFiltroCNPJ(e.target.value)}
-                className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md"
-              >
-                <option value="">Todos os CNPJs</option>
-                <option value="12.345.678/0001-90">Empresa Principal LTDA</option>
-                <option value="98.765.432/0001-10">Filial Norte LTDA</option>
-                <option value="11.222.333/0001-44">Filial Sul LTDA</option>
-              </select>
-            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Resumo */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <p className="text-sm text-muted-foreground">Total de Saídas Filtradas</p>
-            <p className="text-3xl font-bold text-red-600">{formatCurrency(totalSaidas)}</p>
-            <p className="text-sm text-muted-foreground">{saidasFiltradas.length} registro(s)</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabela */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Saídas</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardHeader><CardTitle>Lista de Despesas</CardTitle></CardHeader>
+        <CardContent className="max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border scrollbar-thumb-rounded-md hover:scrollbar-thumb-accent">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Data</TableHead>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead>Categoria</TableHead>
                 <TableHead>Descrição</TableHead>
-                <TableHead>Forma Pagamento</TableHead>
-                <TableHead>Banco</TableHead>
-                <TableHead>CNPJ</TableHead>
-                <TableHead>Anexo</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
+                <TableHead>Fornecedor</TableHead>
+                <TableHead>Plano de Contas</TableHead>
+                <TableHead className="text-center">Conta</TableHead>
+                <TableHead className="text-center">Forma de pagamento</TableHead>
+                <TableHead className="text-center">Valor</TableHead>
+                <TableHead className="text-center w-[100px]">Anexo</TableHead>
+                <TableHead className="text-right w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {saidasFiltradas.map((saida) => (
-                <TableRow key={saida.id}>
-                  <TableCell>{formatDate(saida.data)}</TableCell>
-                  <TableCell className="font-medium">{saida.fornecedor}</TableCell>
-                  <TableCell>
-                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs">
-                      {saida.categoria}
-                    </span>
-                  </TableCell>
-                  <TableCell>{saida.descricao}</TableCell>
-                  <TableCell>{saida.formaPagamento}</TableCell>
-                  <TableCell>{saida.banco}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{saida.cnpj}</TableCell>
-                  <TableCell>
-                    {saida.anexo ? (
-                      <Button variant="ghost" size="icon">
-                        <Download className="h-4 w-4" />
+              {paginatedExpenses.map((expense) => (
+                <TableRow key={expense.id}>
+                  <TableCell>{formatDate(new Date(expense.expense_date))}</TableCell>
+                  <TableCell className="font-medium">{expense.description}</TableCell>
+                  <TableCell>{expense.supplier?.name || 'N/A'}</TableCell>
+                  <TableCell>{expense.account_plan?.name || 'N/A'}</TableCell>
+                  <TableCell className="text-center">{expense.bank?.bank_name + ' (' + formatBankAccount(expense?.bank?.account || '') + ')' || 'N/A'}</TableCell>
+                  <TableCell className="text-center">{expense.payment_method?.name || 'N/A'}</TableCell>
+                  <TableCell className="text-center font-medium text-red-600">{formatCurrency(Number(expense.amount))}</TableCell>
+                  <TableCell className="text-center">
+                    {expense.file_path ? (
+                      <Button asChild variant="ghost" size="icon">
+                        <a href={expense.file_path} target="_blank" rel="noopener noreferrer" download>
+                          <Download className="h-4 w-4" />
+                        </a>
                       </Button>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+                    ) : '-'}
                   </TableCell>
-                  <TableCell className="text-right font-medium text-red-600">
-                    {formatCurrency(saida.valor)}
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="icon" onClick={() => handleEditClick(expense)}><Edit className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(expense.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
+            <ShadcnTableFooter>
+              <TableRow>
+                <TableCell colSpan={5} className="font-bold text-right">Total</TableCell>
+                <TableCell className="text-right font-bold text-red-600">{formatCurrency(totalExpenses)}</TableCell>
+                <TableCell colSpan={2}></TableCell>
+              </TableRow>
+            </ShadcnTableFooter>
           </Table>
         </CardContent>
+        <CardFooter className="flex items-center justify-between pt-4">
+          <div className="text-sm text-muted-foreground">
+            {filteredExpenses.length} registro(s) encontrado(s).
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => prev - 1)} disabled={currentPage === 1}>
+              Anterior
+            </Button>
+            <span className="text-sm font-medium">
+              Página {currentPage} de {totalPages > 0 ? totalPages : 1}
+            </span>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => prev + 1)} disabled={currentPage >= totalPages}>
+              Próximo
+            </Button>
+          </div>
+        </CardFooter>
       </Card>
+
+      <GenericForm
+        isOpen={isModalOpen}
+        onOpenChange={(isOpen) => { if (!isOpen) setExpenseToEdit(null); setIsModalOpen(isOpen); }}
+        onSubmit={handleFormSubmit}
+        isLoading={isCreating || isUpdating || isUploading}
+        initialData={expenseToEdit}
+        fields={formFields}
+        schema={expenseSchema}
+        title={expenseToEdit ? 'Editar Despesa' : 'Nova Despesa'}
+        description="Preencha as informações abaixo para registrar a despesa financeira."
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={isAlertOpen}
+        onOpenChange={setIsAlertOpen}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+        description="Essa ação não pode ser desfeita. Isso irá excluir permanentemente a despesa."
+      />
     </div>
-  )
+  );
 }

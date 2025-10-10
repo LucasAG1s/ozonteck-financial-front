@@ -29,6 +29,7 @@ export interface User {
   permissions: {
     dashboard: boolean
     plans: boolean
+    cashflow: boolean 
     companies: boolean
     entries: boolean
     expenses: boolean
@@ -52,8 +53,8 @@ interface AuthContextType {
 }
 
 const getPermissionsByRole = (roleName: string) => {
-  const rolePermissions = {
-    'Master': {
+  const rolePermissions: Record<string, User['permissions']> = {
+    'master': { 
       dashboard: true,
       plans: true,
       companies: true,
@@ -61,13 +62,14 @@ const getPermissionsByRole = (roleName: string) => {
       expenses: true,
       reports: true,
       colaboradores: true,
+      cashflow: true, 
       pagamentos: true,
       integracoes: true,
       usuarios: true,
       suppliers: true,
       dre:true
     },
-    'Gerente': {
+    'gerente': { 
       dashboard: true,
       plans: true,
       companies: true,
@@ -75,6 +77,7 @@ const getPermissionsByRole = (roleName: string) => {
       expenses: true,
       reports: true,
       colaboradores: true,
+      cashflow: true, 
       pagamentos: true,
       integracoes: false,
       usuarios: false,
@@ -82,7 +85,7 @@ const getPermissionsByRole = (roleName: string) => {
       dre:true
 
     },
-    'Auxiliar': {
+    'auxiliar': { 
       dashboard: true,
       plans: true,
       companies: false,
@@ -90,6 +93,7 @@ const getPermissionsByRole = (roleName: string) => {
       expenses: true,
       reports: false,
       colaboradores: false,
+      cashflow: true, 
       pagamentos: false,
       integracoes: false,
       usuarios: false,
@@ -98,11 +102,10 @@ const getPermissionsByRole = (roleName: string) => {
 
     }
   }
-  
-  return rolePermissions[roleName as keyof typeof rolePermissions] || rolePermissions['Auxiliar']
+  const normalizedRoleName = roleName.toLowerCase(); 
+  return rolePermissions[normalizedRoleName] || rolePermissions['auxiliar'];
 }
 
-// Exportar o contexto para ser usado no hook
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 interface AuthProviderProps {
@@ -119,11 +122,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       try {
         const isAuthenticated = localStorage.getItem('isAuthenticated')
         const token = localStorage.getItem('authToken')
-        
+
         if (isAuthenticated === 'true' && token) {
           try {
             const userProfile = await authService.getProfile()
-            const permissions = getPermissionsByRole(userProfile.roles[0]?.name || 'auxiliar')
+            const roleName = (userProfile.roles && userProfile.roles.length > 0) ? userProfile.roles[0].name : 'auxiliar';
+            const permissions = getPermissionsByRole(roleName);
             
             const userData: User = {
               ...userProfile,
@@ -161,11 +165,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setIsLoading(true)
     
     try {
-       await authService.login({ email, password })
+      const { token } = await authService.login({ email, password })
       
       const userProfile = await authService.getProfile()
       
-      const permissions = getPermissionsByRole(userProfile.roles[0]?.name || 'auxiliar')
+      const roleName = (userProfile.roles && userProfile.roles.length > 0) ? userProfile.roles[0].name : 'auxiliar';
+      const permissions = getPermissionsByRole(roleName);
       
       const userData: User = {
         ...userProfile,
@@ -174,6 +179,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setUser(userData)
       localStorage.setItem('isAuthenticated', 'true')
+      localStorage.setItem('authToken', token)
       localStorage.setItem('user', JSON.stringify(userData))
       
       

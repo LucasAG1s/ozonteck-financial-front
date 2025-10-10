@@ -1,4 +1,4 @@
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useEffect } from 'react';
@@ -26,29 +26,30 @@ import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 /**
  * Define a estrutura de um campo de formulário.
  */
-export interface FormFieldConfig {
-  name: string; // Key of the field in the schema
+export interface FormFieldConfig<TFieldValues extends z.AnyZodObject> {
+  name: Path<z.infer<TFieldValues>>; // Garante que o nome seja uma chave válida do schema
   label: string; // Label displayed to the user
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea'; // Input type
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'datetime-local' |'file';
+  accept?: string;
   placeholder?: string;
   options?: { value: string | number; label: string }[];
   step?: string; // Para campos do tipo 'number'
   gridCols?: number; // Para controlar o layout em grid
 }
 
-interface GenericFormProps<T extends z.ZodType<any, any>> {
+interface GenericFormProps<T extends z.ZodObject<any, any, any>> {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSubmit: (data: z.infer<T>) => void;
   isLoading: boolean;
-  initialData?: z.infer<T> | null;
-  fields: FormFieldConfig[];
+  initialData?: Partial<z.infer<T>> | null;
+  fields: FormFieldConfig<T>[];
   schema: T;
   title: string;
   description: string;
 }
 
-export function GenericForm<T extends z.ZodType<any, any>>({
+export function GenericForm<T extends z.ZodObject<any, any, any>>({
   isOpen,
   onOpenChange,
   onSubmit,
@@ -74,6 +75,7 @@ export function GenericForm<T extends z.ZodType<any, any>>({
       if (initialData) {
         reset(initialData);
       } else {
+        // Corrigido: Usar schema.shape para obter as chaves do esquema Zod
         const defaultValues = Object.keys(schema.shape).reduce((acc, key) => {
           acc[key] = undefined;
           return acc;
@@ -83,8 +85,8 @@ export function GenericForm<T extends z.ZodType<any, any>>({
     }
   }, [isOpen, initialData, reset, schema]);
 
-  const renderField = (fieldConfig: FormFieldConfig) => {
-    const error = errors[fieldConfig.name]?.message as string | undefined;
+  const renderField = (fieldConfig: FormFieldConfig<T>) => {
+    const error = errors[fieldConfig.name as string]?.message as string | undefined;
     const colSpanClass = fieldConfig.gridCols ? `md:col-span-${fieldConfig.gridCols}` : 'md:col-span-2';
 
     return (
@@ -117,6 +119,7 @@ export function GenericForm<T extends z.ZodType<any, any>>({
             type={fieldConfig.type}
             placeholder={fieldConfig.placeholder}
             step={fieldConfig.type === 'number' ? fieldConfig.step : undefined}
+            accept={fieldConfig.type === 'file' ? fieldConfig.accept : undefined}
             {...register(fieldConfig.name)}
           />
         )}

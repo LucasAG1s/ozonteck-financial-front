@@ -19,6 +19,7 @@ import { Usuarios } from './features/users/Users'
 import { Suppliers } from './features/suppliers/Suppliers'
 import { Login } from './features/auth/Login'
 import { DRE } from './features/dre/DRE'
+import { CashFlow } from './features/cashFlow/cashFlow' 
 import 'react-toastify/dist/ReactToastify.css'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
@@ -39,7 +40,13 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Dashboard />} />
+              <Route // Rota do Dashboard protegida explicitamente
+                index
+                element={
+                  <ProtectedRoute requiredPermission="dashboard">
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
               <Route
                 path="companies"
                 element={
@@ -69,6 +76,14 @@ function App() {
                 element={
                   <ProtectedRoute requiredPermission="expenses">
                     <Expenses />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="cashflow"
+                element={
+                  <ProtectedRoute requiredPermission="cashflow">
+                    <CashFlow />
                   </ProtectedRoute>
                 }
               />

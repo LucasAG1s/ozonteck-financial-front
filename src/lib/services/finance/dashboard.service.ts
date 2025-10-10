@@ -1,4 +1,4 @@
-import api from '@/lib/axios';
+import api, { handleApiError } from '@/lib/axios';
 
 export interface DashboardData {
   cardsData: any;
@@ -17,7 +17,6 @@ export async function getDashboardData(startDate: string, endDate: string, compa
       });
       return response.data;
     } catch (error) {
-      console.log(error);
-      throw error;
+      throw handleApiError(error, 'Ocorreu um erro ao buscar os dados do dashboard.');
     }
-  }
+}

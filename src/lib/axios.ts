@@ -19,4 +19,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+
+
+export const handleApiError = (error: unknown, defaultMessage: string): never  => {
+  if (axios.isAxiosError(error)) {
+    if (error.response) {
+      const apiMessage = error.response.data?.message;
+      if (apiMessage) {
+        throw new Error(apiMessage);
+      }
+    }
+    throw new Error('Ocorreu um erro inesperado de comunicação');
+  }
+  throw new Error('Ocorreu um erro inesperado');
+};
+
+
+
 export default api;

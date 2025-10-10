@@ -43,6 +43,7 @@ export function Companies() {
   const { data: empresas = [], isLoading, isError } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: getCompanies,
+    staleTime: 30000,
   });
 
   const { mutate: createCompanyMutation } = useMutation({

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,33 +6,34 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableFooter as ShadcnTableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Label } from '@/components/ui/label';
-import { Plus, Search, Filter, Edit, Trash2, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { Plus, Search, Filter, Edit, Trash2  } from 'lucide-react';''
+import { formatCurrency, formatDate, formatBankAccount } from '@/lib/utils';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { Entrie, getEntries, createEntry, updateEntry, UpdateEntryPayload, deleteEntry } from '@/lib/services/finance/entries.service';
 import { getAccountPlans } from '@/lib/services/finance/account-plan.service';
+import { getBanksAccount } from '@/lib/services/finance/banks.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCompanies } from '@/hooks/useCompanies';
 import { DateRangeFilter } from '@/components/ui/dateRangeFilter';
 import { GenericForm, FormFieldConfig} from '@/components/forms/GenericForm';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog';
 
 const entrySchema = z.object({
   description: z.string().min(3, 'A descrição é obrigatória.'),
   amount: z.coerce.string().min(1, 'O valor é obrigatório.'),
-  entry_date: z.string().min(1, 'A data é obrigatória.'),
+  entry_date: z.string().min(1, 'A data é obrigatória.'), 
   company_id: z.coerce.number().min(1, 'A empresa é obrigatória.'),
-  account_plan_id: z.coerce.number().min(1, 'O plano de contas é obrigatório.'),
+  account_plan_id: z.coerce.number({ invalid_type_error: 'O plano de contas é obrigatório.' })
+    .nullable()
+    .refine(val => val !== null && val >= 1, { message: 'O plano de contas é obrigatório.' }),
   bank_account_id: z.coerce.number().min(1, 'A conta bancária é obrigatória.'),
   origin: z.string().min(3, 'A origem é obrigatória.'),
 });
 
-const getBankAccounts = async () => Promise.resolve([
-    { id: 1, name: "Conta Corrente Principal" },
-    { id: 2, name: "Conta Poupança" },
-]);
+
+
 
 export function Entries() {
   const queryClient = useQueryClient();
@@ -55,10 +56,23 @@ export function Entries() {
     queryKey: ['entries', selectedCompany?.id, startDate, endDate], 
     queryFn: () => getEntries(startDate, endDate, String(selectedCompany?.id)),
     enabled: !!selectedCompany?.id,
+    refetchOnWindowFocus:true,
+    staleTime: 30000,
   });
-  const { data: accountPlans = [], isLoading: isLoadingPlans } = useQuery({ queryKey: ['accountPlans'], queryFn: getAccountPlans });
-  const { data: bankAccounts = [], isLoading: isLoadingBanks } = useQuery({ queryKey: ['bankAccounts'], queryFn: getBankAccounts, staleTime: Infinity }); // Adicionado staleTime para simulação
   const { companies, loading: isLoadingCompanies } = useCompanies();
+  const { data: accountPlans = [], isLoading: isLoadingPlans } = useQuery({
+    queryKey: ['accountPlans'],
+    queryFn: getAccountPlans,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+  const { data: bankAccounts = [], isLoading: isLoadingBanks } = useQuery({ 
+    queryKey: ['bankAccounts', selectedCompany?.id], 
+    queryFn: () => getBanksAccount(selectedCompany!.id),
+    staleTime: 30000,
+    enabled: !!selectedCompany?.id 
+  });
 
   const { mutate: createEntryMutation, isPending: isCreating } = useMutation({
     mutationFn: createEntry,
@@ -106,7 +120,12 @@ export function Entries() {
   };
 
   const handleEditClick = (entry: Entrie) => {
-    setEntryToEdit(entry);
+    // Formata a data para o formato esperado pelo input 'datetime-local'
+    const formattedEntry = {
+      ...entry,
+      entry_date: entry.entry_date ? format(new Date(entry.entry_date), "yyyy-MM-dd'T'HH:mm") : '',
+    };
+    setEntryToEdit(formattedEntry as any); // 'as any' para contornar a diferença de tipo da data formatada
     setIsModalOpen(true);
   };
   
@@ -121,7 +140,6 @@ export function Entries() {
     }
   };
 
-  // Lógica de filtro e total
   const filteredEntries = useMemo(() => {
     if (!entries) return [];
     return entries.filter(e => {
@@ -131,20 +149,18 @@ export function Entries() {
     });
   }, [entries, searchTerm, bankAccountFilter]);
 
-  // O total continua sendo calculado sobre TODOS os itens filtrados, não apenas os paginados.
   const totalEntries = filteredEntries.reduce((sum, entry) => sum + Number(entry.amount), 0);
 
-  // Lógica para fatiar os dados para a página atual
   const paginatedEntries = useMemo(() => {
     return filteredEntries.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
   }, [filteredEntries, currentPage]);
 
   const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
 
-  const formFields: FormFieldConfig[] = [
+    const formFields: FormFieldConfig<typeof entrySchema>[] = [
     { name: 'description', label: 'Descrição', type: 'text', placeholder: 'Ex: Venda de produto X', gridCols: 2 },
     { name: 'amount', label: 'Valor', type: 'number', placeholder: '0,00', step: "0.01", gridCols: 1 },
-    { name: 'entry_date', label: 'Data da Entrada', type: 'date', gridCols: 1 },
+    { name: 'entry_date', label: 'Data da Entrada', type: 'datetime-local', gridCols: 1 },
     {
       name: 'company_id',
       label: 'Empresa (CNPJ)',
@@ -158,7 +174,10 @@ export function Entries() {
       label: 'Plano de Contas',
       type: 'select',
       placeholder: 'Selecione um plano',
-      options: accountPlans.filter(p => p.type === 1).map(p => ({ value: p.id, label: `${p.name} (${p.description})` })),
+      options: [
+        { value: 'null', label: 'Selecione um plano' }, // Opção padrão com valor não-vazio
+        ...accountPlans.filter(p => p.type === 1 && p.parent_id != null).map(p => ({ value: p.id, label: `${p.name} (${p.id})` }))
+      ],
       gridCols: 1,
     },
     {
@@ -166,7 +185,7 @@ export function Entries() {
       label: 'Conta Bancária',
       type: 'select',
       placeholder: 'Selecione uma conta',
-      options: bankAccounts.map(b => ({ value: b.id, label: b.name })),
+      options: bankAccounts.map(b => ({ value: b.id, label: b.bank_name + ' ( ' + formatBankAccount(b.account) + ' )' })),
       gridCols: 1,
     },
     { name: 'origin', label: 'Origem', type: 'text', placeholder: 'Ex: Cliente Y', gridCols: 2 },
@@ -205,7 +224,7 @@ export function Entries() {
                 <SelectContent>
                   <SelectItem value="all">Todas as contas</SelectItem>
                   {bankAccounts.map(account => (
-                    <SelectItem key={account.id} value={String(account.id)}>{account.name}</SelectItem>
+                    <SelectItem key={account.id} value={String(account.id)}>{account.bank_name} ({ formatBankAccount(account.account)})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -234,7 +253,8 @@ export function Entries() {
                 <TableHead>Data</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Plano de Contas</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
+                <TableHead className="text-center">Conta Bancária</TableHead>
+                <TableHead className="text-center">Valor</TableHead>
                 <TableHead className="text-right w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -244,7 +264,8 @@ export function Entries() {
                   <TableCell>{formatDate(new Date(entry.entry_date))}</TableCell>
                   <TableCell className="font-medium">{entry.description}</TableCell>
                   <TableCell>{entry.account_plan?.name || 'N/A'}</TableCell>
-                  <TableCell className="text-right font-medium text-green-600">{formatCurrency(Number(entry.amount))}</TableCell>
+                  <TableCell className="text-center">{entry.bank?.bank_name + ' (' + formatBankAccount(entry?.bank?.account || '') + ')' || 'N/A'}</TableCell>
+                  <TableCell className="text-center font-medium text-green-600">{formatCurrency(Number(entry.amount))}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button variant="ghost" size="icon" onClick={() => handleEditClick(entry)}><Edit className="h-4 w-4" /></Button>
@@ -293,20 +314,13 @@ export function Entries() {
         description="Preencha as informações abaixo para registrar a entrada financeira."
       />
 
-       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription>Essa ação não pode ser desfeita. Isso irá excluir permanentemente o lançamento.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
-                {isDeleting ? 'Excluindo...' : 'Confirmar Exclusão'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        isOpen={isAlertOpen}
+        onOpenChange={setIsAlertOpen}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+        description="Essa ação não pode ser desfeita. Isso irá excluir permanentemente o lançamento."
+      />
     </div>
   );
 }

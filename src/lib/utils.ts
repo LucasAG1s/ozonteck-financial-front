@@ -23,3 +23,9 @@ export function formatCPF(cpf: string): string {
 export function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('pt-BR').format(date)
 }
+
+
+export function formatBankAccount(account: number | string): string {
+  const accountStr = account.toString().replace(/\D/g, '');
+  return accountStr.replace(/^(.*)(\d{1})$/, '$1-$2');
+}

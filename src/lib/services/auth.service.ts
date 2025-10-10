@@ -83,7 +83,7 @@ class AuthService {
   async login(data: LoginData): Promise<AuthResponse> {
     try {
       const validatedData = loginSchema.parse(data);
-      const response = await api.post<{ token: string }>('/auth/login', validatedData);
+      const response = await api.post<{ token: string }>('api/auth/login', validatedData);
       
       if (response.data.token) {
         localStorage.setItem('authToken', response.data.token);
