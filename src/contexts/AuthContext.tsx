@@ -79,8 +79,8 @@ const getPermissionsByRole = (roleName: string) => {
       colaboradores: true,
       cashflow: true, 
       pagamentos: true,
-      integracoes: false,
-      usuarios: false,
+      integracoes: true,
+      usuarios: true,
       suppliers: true,
       dre:true
 
@@ -88,15 +88,15 @@ const getPermissionsByRole = (roleName: string) => {
     'auxiliar': { 
       dashboard: true,
       plans: true,
-      companies: false,
+      companies: true,
       entries: true,
       expenses: true,
-      reports: false,
-      colaboradores: false,
+      reports: true,
+      colaboradores: true,
       cashflow: true, 
-      pagamentos: false,
-      integracoes: false,
-      usuarios: false,
+      pagamentos: true,
+      integracoes: true,
+      usuarios: true,
       suppliers: true,
       dre:true
 
