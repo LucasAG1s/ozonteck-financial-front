@@ -12,8 +12,10 @@ import { Companies } from './features/companies/Companies'
 import { Entries } from './features/entries/Entries'
 import { Expenses } from './features/expenses/Expenses'
 import { Reports } from './features/relatorios/Relatorios'
-import { Colaboradores } from './features/colaboradores/Colaboradores'
+import { Employees } from './features/employees/Employees'
+import { EmployeeEditPage } from './features/employees/EmployeeEditPage' // Importar a nova página
 import { Pagamentos } from './features/pagamentos/Pagamentos'
+import { SupplierEditPage } from './features/suppliers/SupplierEditPage'
 import { Integracoes } from './features/integracoes/Integracoes'
 import { Usuarios } from './features/users/Users'
 import { Suppliers } from './features/suppliers/Suppliers'
@@ -104,21 +106,27 @@ function App() {
                 }
               />
               <Route
-                path="colaboradores"
+                path="employees/*"
                 element={
-                  <ProtectedRoute requiredPermission="colaboradores">
-                    <Colaboradores />
+                  <ProtectedRoute requiredPermission="employees">
+                    <Employees />
                   </ProtectedRoute>
                 }
-              />
+              >
+                <Route index element={<Employees />} />
+                <Route path="edit/:id" element={<EmployeeEditPage />} />
+              </Route>
               <Route
-                path="suppliers"
+                path="suppliers/*"
                 element={
                   <ProtectedRoute requiredPermission="suppliers">
                     <Suppliers />
                   </ProtectedRoute>
                 }
-              />
+              >
+                <Route index element={<Suppliers />} />
+                <Route path="edit/:id" element={<SupplierEditPage />} />
+              </Route>
               <Route
                 path="pagamentos"
                 element={

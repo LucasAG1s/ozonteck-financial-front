@@ -31,7 +31,7 @@ const navigation = [
   { name: 'Saídas', href: '/expenses', icon: TrendingDown },
   { name: 'Fluxo de Caixa', href: '/cashflow', icon: Wallet },
   { name: 'DRE Gerencial', href: '/dre', icon: BarChart3 },
-  { name: 'Colaboradores', href: '/colaboradores', icon: Users },
+  { name: 'Colaboradores', href: '/employees', icon: Users },
   { name: 'Fornecedores', href: '/suppliers', icon: Truck },
   { name: 'Pagamentos', href: '/pagamentos', icon: CreditCard },
   { name: 'Integrações', href: '/integracoes', icon: Building },

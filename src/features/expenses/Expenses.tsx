@@ -14,7 +14,7 @@ import { toast } from 'react-toastify';
 import { Expense, getExpenses, createExpense, updateExpense, UpdateExpensePayload, deleteExpense, uploadFile } from '@/lib/services/finance/expenses.service';
 import { getAccountPlans, AccountPlan } from '@/lib/services/finance/account-plan.service';
 import { getBanksAccount, BankAccount } from '@/lib/services/finance/banks.service';
-import { getSuppliers, Supplier } from '@/lib/services/finance/supllier.service';
+import { getSuppliers, Supplier } from '@/lib/services/finance/suppliers.service';
 import { PaymentMethod,getPaymentMethods } from '@/lib/services/finance/payment-methods.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from "@/components/ui/skeleton";

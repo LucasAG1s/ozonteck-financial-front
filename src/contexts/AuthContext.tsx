@@ -34,7 +34,7 @@ export interface User {
     entries: boolean
     expenses: boolean
     reports: boolean
-    colaboradores: boolean
+    employees: boolean
     dre:boolean
     pagamentos: boolean
     integracoes: boolean
@@ -61,7 +61,7 @@ const getPermissionsByRole = (roleName: string) => {
       entries: true,
       expenses: true,
       reports: true,
-      colaboradores: true,
+      employees: true,
       cashflow: true, 
       pagamentos: true,
       integracoes: true,
@@ -76,7 +76,7 @@ const getPermissionsByRole = (roleName: string) => {
       entries: true,
       expenses: true,
       reports: true,
-      colaboradores: true,
+      employees: true,
       cashflow: true, 
       pagamentos: true,
       integracoes: true,
@@ -92,7 +92,7 @@ const getPermissionsByRole = (roleName: string) => {
       entries: true,
       expenses: true,
       reports: true,
-      colaboradores: true,
+      employees: true,
       cashflow: true, 
       pagamentos: true,
       integracoes: true,

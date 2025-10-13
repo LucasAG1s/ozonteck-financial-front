@@ -29,11 +29,12 @@ import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 export interface FormFieldConfig<TFieldValues extends z.AnyZodObject> {
   name: Path<z.infer<TFieldValues>>; // Garante que o nome seja uma chave válida do schema
   label: string; // Label displayed to the user
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'datetime-local' |'file';
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'datetime-local' |'file'|'email';
   accept?: string;
   placeholder?: string;
   options?: { value: string | number; label: string }[];
   step?: string; // Para campos do tipo 'number'
+  disabled?: boolean; // Para campos desabilitados
   gridCols?: number; // Para controlar o layout em grid
 }
 
@@ -75,7 +76,6 @@ export function GenericForm<T extends z.ZodObject<any, any, any>>({
       if (initialData) {
         reset(initialData);
       } else {
-        // Corrigido: Usar schema.shape para obter as chaves do esquema Zod
         const defaultValues = Object.keys(schema.shape).reduce((acc, key) => {
           acc[key] = undefined;
           return acc;
@@ -101,7 +101,7 @@ export function GenericForm<T extends z.ZodObject<any, any, any>>({
                 <SelectTrigger><SelectValue placeholder={fieldConfig.placeholder} /></SelectTrigger>
                 <SelectContent>
                   {fieldConfig.options?.map(option => (
-                    <SelectItem key={option.value} value={String(option.value)}>{option.label}</SelectItem>
+                    <SelectItem key={option.value} value={String(option.value)} disabled={fieldConfig.disabled}>{option.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
