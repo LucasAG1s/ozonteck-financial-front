@@ -94,7 +94,7 @@ export function Employees() {
   const filteredEmployees = useMemo(() => employees.filter(employee => {
     const employeeContract = employee.contracts?.[0];
     const matchSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       (employee.data.cpf && employee.data.cpf.includes(searchTerm)) ||
+                       (employee.data.document_number && employee.data.document_number.includes(searchTerm)) ||
                        (employeeContract?.position && employeeContract.position.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchStatus = !statusFilter || 
                        (statusFilter === 'ativo' && employee.active) || 
