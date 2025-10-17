@@ -6,19 +6,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getEmployeeById } from '@/lib/services/hr/employees.service'; // Assumindo que esta função será criada
+import { getEmployeeById } from '@/lib/services/hr/employees.service';
 
 export function EmployeeEditPage() {
   const { id } = useParams<{ id: string }>();
 
-
   const { data: employee, isLoading } = useQuery({
     queryKey: ['employee', id],
-    queryFn: async () => {
-      console.log(`Buscando colaborador com ID: ${id}`);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      return { id, name: 'Nome do Colaborador' }; // Dado mocados
-    },
+    queryFn: () => getEmployeeById(Number(id)),
     enabled: !!id,
   });
 
@@ -43,25 +38,33 @@ export function EmployeeEditPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="address" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="general">Dados Gerais</TabsTrigger>
           <TabsTrigger value="address">Endereço</TabsTrigger>
-          <TabsTrigger value="documents">Documentos</TabsTrigger>
-          <TabsTrigger value="affiliates">Filiados</TabsTrigger>
-          <TabsTrigger value="other">Outros Dados</TabsTrigger>
+          <TabsTrigger value="bank">Dados Bancários</TabsTrigger>
+          <TabsTrigger value="contracts">Contratos</TabsTrigger>
+          <TabsTrigger value="payments">Pagamentos</TabsTrigger>
+          <TabsTrigger value="additional_data">Dados Adicionais</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="general">
+          <Card><CardHeader><CardTitle>Dados Gerais</CardTitle><CardDescription>Informações principais do colaborador, como nome, CPF, cargo e salário.</CardDescription></CardHeader><CardContent><p>Formulário de Dados Gerais aqui...</p></CardContent></Card>
+        </TabsContent>
         <TabsContent value="address">
           <Card><CardHeader><CardTitle>Endereço</CardTitle><CardDescription>Informações de localização do colaborador.</CardDescription></CardHeader><CardContent><p>Formulário de endereço aqui...</p></CardContent></Card>
         </TabsContent>
-        <TabsContent value="documents">
-          <Card><CardHeader><CardTitle>Documentos</CardTitle><CardDescription>Documentos pessoais e profissionais.</CardDescription></CardHeader><CardContent><p>Formulário de documentos aqui...</p></CardContent></Card>
+        <TabsContent value="bank">
+          <Card><CardHeader><CardTitle>Dados Bancários</CardTitle><CardDescription>Informações da conta bancária para pagamentos.</CardDescription></CardHeader><CardContent><p>Formulário de Dados Bancários aqui...</p></CardContent></Card>
         </TabsContent>
-        <TabsContent value="affiliates">
-          <Card><CardHeader><CardTitle>Filiados</CardTitle><CardDescription>Informações sobre dependentes ou filiados.</CardDescription></CardHeader><CardContent><p>Formulário de filiados aqui...</p></CardContent></Card>
+        <TabsContent value="contracts">
+          <Card><CardHeader><CardTitle>Contratos</CardTitle><CardDescription>Histórico e detalhes dos contratos de trabalho.</CardDescription></CardHeader><CardContent><p>Formulário de Contratos aqui...</p></CardContent></Card>
         </TabsContent>
-        <TabsContent value="other">
-          <Card><CardHeader><CardTitle>Outros Dados</CardTitle><CardDescription>Informações adicionais e complementares.</CardDescription></CardHeader><CardContent><p>Outros formulários aqui...</p></CardContent></Card>
+        <TabsContent value="payments">
+          <Card><CardHeader><CardTitle>Pagamentos</CardTitle><CardDescription>Histórico de pagamentos realizados ao colaborador.</CardDescription></CardHeader><CardContent><p>Tabela de Pagamentos aqui...</p></CardContent></Card>
+        </TabsContent>
+        <TabsContent value="additional_data">
+          <Card><CardHeader><CardTitle>Dados Adicionais</CardTitle><CardDescription>Outras informações relevantes sobre o colaborador.</CardDescription></CardHeader><CardContent><p>Formulário de Dados Adicionais aqui...</p></CardContent></Card>
         </TabsContent>
       </Tabs>
     </div>

@@ -31,6 +31,7 @@ export interface User {
   created_at: string;
   updated_at: string;
   roles: Role[];
+  avatar:string | null;
 }
 
 export interface AuthResponse {
@@ -110,8 +111,8 @@ class AuthService {
 
   async getProfile(): Promise<User> {
     try {
-      const response = await api.get<User>('api/user/me');
-      return response.data;
+      const response = await api.get<{ data: User }>('api/user/me');
+      return response.data.data;
     } catch (error) {
       throw handleApiError(error);
     }

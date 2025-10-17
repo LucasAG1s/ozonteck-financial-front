@@ -11,7 +11,8 @@ import { Plus, Search, Filter, Edit, Trash2, Download } from 'lucide-react';
 import { formatCurrency, formatDate, formatBankAccount } from '@/lib/utils';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { toast } from 'react-toastify';
-import { Expense, getExpenses, createExpense, updateExpense, UpdateExpensePayload, deleteExpense, uploadFile } from '@/lib/services/finance/expenses.service';
+import { Expense, getExpenses, createExpense, updateExpense, UpdateExpensePayload,CreateExpensePayload, deleteExpense } from '@/lib/services/finance/expenses.service';
+import { getTemporaryFileUrl } from '@/lib/services/generic.service';
 import { getAccountPlans, AccountPlan } from '@/lib/services/finance/account-plan.service';
 import { getBanksAccount, BankAccount } from '@/lib/services/finance/banks.service';
 import { getSuppliers, Supplier } from '@/lib/services/finance/suppliers.service';
@@ -36,7 +37,7 @@ const expenseSchema = z.object({
     .nullable()
     .refine(val => val !== null && val >= 1, { message: 'O plano de contas é obrigatório.' }),
   bank_account_id: z.coerce.number().min(1, 'A conta bancária é obrigatória.'),
-  file_path: z.any()
+  file: z.any()
     .transform((value) => {
       if (value instanceof FileList) return value[0] || null; 
       return value;
@@ -102,11 +103,6 @@ export function Expenses() {
     refetchOnWindowFocus: false,
   }); 
 
-  const { mutate: uploadFileMutation, isPending: isUploading } = useMutation({
-    mutationFn: uploadFile,
-    onError: (error: Error) => toast.error(`Erro no upload: ${error.message}`),
-  });
-
   const { mutate: createExpenseMutation, isPending: isCreating } = useMutation({
     mutationFn: createExpense,
     onSuccess: () => {
@@ -139,30 +135,29 @@ export function Expenses() {
     onError: (error: Error) => toast.error(`Erro ao excluir despesa: ${error.message}`),
   });
 
+  const { mutate: getFileUrlMutation, isPending: isGettingUrl } = useMutation({
+    mutationFn: ({ path, disk }: { path: string; disk: string }) => getTemporaryFileUrl(path, disk),
+    onSuccess: (data) => {
+      window.open(data.url, '_blank');
+    },
+    onError: (error: Error) => toast.error(`Não foi possível acessar o anexo: ${error.message}`),
+  });
+
   const handleFormSubmit = (data: z.infer<typeof expenseSchema>) => {
-    const processSubmit = (filePathUrl?: string | null) => {
-      const payload = {
-        ...data,
-
-        account_plan_id: data.account_plan_id as number,
-        file_path: filePathUrl ?? (expenseToEdit?.file_path ?? ''),
-      };
-
-      if (expenseToEdit) {
-        updateExpenseMutation({ id: expenseToEdit.id, payload: payload });
-      } else {
-        createExpenseMutation(payload);
-      }
+    const payload = {
+      ...data,
+      account_plan_id: data.account_plan_id as number,
     };
 
-    if (data.file_path instanceof File) {
-      uploadFileMutation(data.file_path, {
-        onSuccess: (uploadResponse) => {
-          processSubmit(uploadResponse.url);
-        },
-      });
+    if (expenseToEdit) {
+      const updatePayload: UpdateExpensePayload = payload;
+      // Se não houver um novo arquivo, não envie o campo 'file'
+      if (!(payload.file instanceof File)) {
+        delete updatePayload.file;
+      }
+      updateExpenseMutation({ id: expenseToEdit.id, payload: updatePayload });
     } else {
-      processSubmit(data.file_path);
+      createExpenseMutation(payload as CreateExpensePayload);
     }
   };
 
@@ -175,6 +170,8 @@ export function Expenses() {
     const formattedExpense = {
       ...expense,
       expense_date: expense.expense_date ? format(new Date(expense.expense_date), "yyyy-MM-dd'T'HH:mm") : '',
+      // Passa a URL do arquivo existente para o campo 'file' do formulário
+      file: expense.file_path,
     };
     setExpenseToEdit(formattedExpense as any);
     setIsModalOpen(true);
@@ -189,6 +186,13 @@ export function Expenses() {
     if (expenseToDelete !== null) {
       deleteExpenseMutation(expenseToDelete);
     }
+  };
+
+  const handleDownloadClick = (filePath: string) => {
+    getFileUrlMutation({
+      path: filePath,
+      disk: 's3', // O disco padrão, conforme sua solicitação
+    });
   };
 
   const filteredExpenses = useMemo(() => {
@@ -260,7 +264,7 @@ export function Expenses() {
       options: bankAccounts.map(b => ({ value: b.id, label: b.bank_name + ' ( ' + formatBankAccount(b.account) + ' )' })),
       gridCols: 1,
     },
-    { name: 'file_path', label: 'Anexo (NF, Comprovante)', type: 'file' ,accept:'.pdf,.png,.jpg,.jpeg', gridCols: 2 },
+    { name: 'file', label: 'Anexo (NF, Comprovante)', type: 'file' ,accept:'.pdf,.png,.jpg,.jpeg', gridCols: 2 },
   ];
 
   const isLoading = isLoadingExpenses || isLoadingCompanies || isLoadingPlans || isLoadingPaymentMethod || isLoadingBanks || isLoadingSuppliers;
@@ -362,11 +366,13 @@ export function Expenses() {
                   <TableCell className="text-center font-medium text-red-600">{formatCurrency(Number(expense.amount))}</TableCell>
                   <TableCell className="text-center">
                     {expense.file_path ? (
-                      <Button asChild variant="ghost" size="icon">
-                        <a href={expense.file_path} target="_blank" rel="noopener noreferrer" download>
-                          <Download className="h-4 w-4" />
-                        </a>
-                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDownloadClick(expense.file_path)}
+                        disabled={isGettingUrl}
+                        title="Visualizar/Baixar Anexo"
+                      ><Download className="h-4 w-4" /></Button>
                     ) : '-'}
                   </TableCell>
                   <TableCell className="text-right">
@@ -409,7 +415,7 @@ export function Expenses() {
         isOpen={isModalOpen}
         onOpenChange={(isOpen) => { if (!isOpen) setExpenseToEdit(null); setIsModalOpen(isOpen); }}
         onSubmit={handleFormSubmit}
-        isLoading={isCreating || isUpdating || isUploading}
+        isLoading={isCreating || isUpdating}
         initialData={expenseToEdit}
         fields={formFields}
         schema={expenseSchema}

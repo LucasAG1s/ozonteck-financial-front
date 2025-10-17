@@ -22,20 +22,20 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea'; // Import Textarea
+import { PasswordStrength } from '../ui/PasswordStrength';
+import { PasswordInput } from '../ui/PasswordInput';
 
-/**
- * Define a estrutura de um campo de formulário.
- */
+
 export interface FormFieldConfig<TFieldValues extends z.AnyZodObject> {
-  name: Path<z.infer<TFieldValues>>; // Garante que o nome seja uma chave válida do schema
-  label: string; // Label displayed to the user
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'datetime-local' |'file'|'email';
+  name: Path<z.infer<TFieldValues>>; 
+  label: string; 
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'datetime-local' | 'file' | 'email' | 'password';
   accept?: string;
   placeholder?: string;
   options?: { value: string | number; label: string }[];
-  step?: string; // Para campos do tipo 'number'
-  disabled?: boolean; // Para campos desabilitados
-  gridCols?: number; // Para controlar o layout em grid
+  step?: string; 
+  disabled?: boolean; 
+  gridCols?: number; 
 }
 
 interface GenericFormProps<T extends z.ZodObject<any, any, any>> {
@@ -65,6 +65,7 @@ export function GenericForm<T extends z.ZodObject<any, any, any>>({
     register,
     handleSubmit,
     control,
+    watch,
     reset,
     formState: { errors },
   } = useForm<z.infer<T>>({
@@ -89,6 +90,8 @@ export function GenericForm<T extends z.ZodObject<any, any, any>>({
     const error = errors[fieldConfig.name as string]?.message as string | undefined;
     const colSpanClass = fieldConfig.gridCols ? `md:col-span-${fieldConfig.gridCols}` : 'md:col-span-2';
 
+    const passwordValue = fieldConfig.name === 'password' ? watch('password' as Path<z.infer<T>>) : undefined;
+
     return (
       <div key={fieldConfig.name} className={colSpanClass}>
         <Label htmlFor={fieldConfig.name}>{fieldConfig.label}</Label>
@@ -97,11 +100,11 @@ export function GenericForm<T extends z.ZodObject<any, any, any>>({
             name={fieldConfig.name}
             control={control}
             render={({ field }) => (
-              <Select onValueChange={field.onChange} value={String(field.value ?? '')}>
+              <Select onValueChange={field.onChange} value={String(field.value ?? '')} disabled={fieldConfig.disabled}>
                 <SelectTrigger><SelectValue placeholder={fieldConfig.placeholder} /></SelectTrigger>
-                <SelectContent>
+                <SelectContent> 
                   {fieldConfig.options?.map(option => (
-                    <SelectItem key={option.value} value={String(option.value)} disabled={fieldConfig.disabled}>{option.label}</SelectItem>
+                    <SelectItem key={option.value} value={String(option.value)}>{option.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -109,6 +112,12 @@ export function GenericForm<T extends z.ZodObject<any, any, any>>({
           />
         ) : fieldConfig.type === 'textarea' ? (
           <Textarea
+            id={fieldConfig.name}
+            placeholder={fieldConfig.placeholder}
+            {...register(fieldConfig.name)}
+          />
+        ) : fieldConfig.type === 'password' ? (
+          <PasswordInput
             id={fieldConfig.name}
             placeholder={fieldConfig.placeholder}
             {...register(fieldConfig.name)}
@@ -124,6 +133,9 @@ export function GenericForm<T extends z.ZodObject<any, any, any>>({
           />
         )}
         {error && <p className="text-sm text-destructive mt-1">{error}</p>}
+        {fieldConfig.name === 'password' && passwordValue && (
+          <PasswordStrength password={passwordValue} />
+        )}
       </div>
     );
   };

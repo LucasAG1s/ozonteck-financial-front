@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import {
@@ -14,7 +15,8 @@ import {
   Settings,
   X,
   Home,
-  Truck
+  Truck,
+  ChevronDown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -23,17 +25,27 @@ interface SidebarProps {
   onClose: () => void
 }
 
-const navigation = [
+type NavItem = {
+  name: string;
+  href?: string;
+  icon: React.ElementType;
+  children?: Omit<NavItem, 'children'>[];
+}
+
+const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Planos de Contas', href: '/account-plans', icon: ListTree },
   { name: 'Empresas', href: '/companies', icon: Building2 },
   { name: 'Entradas', href: '/entries', icon: TrendingUp },
   { name: 'Saídas', href: '/expenses', icon: TrendingDown },
-  { name: 'Fluxo de Caixa', href: '/cashflow', icon: Wallet },
+  { name: 'Fluxo de Caixa', href: '/cash-flow', icon: Wallet },
   { name: 'DRE Gerencial', href: '/dre', icon: BarChart3 },
   { name: 'Colaboradores', href: '/employees', icon: Users },
   { name: 'Fornecedores', href: '/suppliers', icon: Truck },
-  { name: 'Pagamentos', href: '/pagamentos', icon: CreditCard },
+  { name: 'Pagamentos', icon: CreditCard, children: [
+    { name: 'Funcionários', href: '/pagamentos/funcionarios', icon: Users },
+    { name: 'Fornecedores', href: '/pagamentos/fornecedores', icon: Truck },
+  ] },
   { name: 'Integrações', href: '/integracoes', icon: Building },
   { name: 'Relatórios', href: '/reports', icon: FileText },
   { name: 'Usuários', href: '/usuarios', icon: Settings },
@@ -41,6 +53,14 @@ const navigation = [
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation()
+  const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>(() => {
+    const activeSubmenu = navigation.find(item => item.children?.some(child => location.pathname.startsWith(child.href!)));
+    return activeSubmenu ? { [activeSubmenu.name]: true } : {};
+  });
+
+  const handleSubmenuToggle = (name: string) => {
+    setOpenSubmenus(prev => ({ ...prev, [name]: !prev[name] }));
+  };
 
   return (
     <>
@@ -70,28 +90,58 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <nav className="mt-6">
           <div className="px-3">
             {navigation.map((item) => {
-              const isActive = location.pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={cn(
-                    "group flex items-center px-3 py-2 text-sm font-medium rounded-md mb-1 transition-colors",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                  )}
-                  onClick={onClose}
-                >
-                  <item.icon
-                    className={cn(
-                      "mr-3 h-5 w-5 flex-shrink-0",
-                      isActive ? "text-primary" : "text-muted-foreground group-hover:text-accent-foreground"
+              if (item.children) {
+                const isSubmenuActive = item.children.some(child => location.pathname.startsWith(child.href!));
+                const isSubmenuOpen = openSubmenus[item.name];
+                return (
+                  <div key={item.name} className="mb-1">
+                    <button
+                      onClick={() => handleSubmenuToggle(item.name)}
+                      className={cn(
+                        "group flex w-full items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                        isSubmenuActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      <div className="flex items-center">
+                        <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                        {item.name}
+                      </div>
+                      <ChevronDown className={cn("h-4 w-4 transform transition-transform", isSubmenuOpen && "rotate-180")} />
+                    </button>
+                    {isSubmenuOpen && (
+                      <div className="mt-1 pl-6 space-y-1">
+                        {item.children.map(child => {
+                          const isChildActive = location.pathname === child.href;
+                          return (
+                            <Link
+                              key={child.name}
+                              to={child.href!}
+                              className={cn(
+                                "group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                                isChildActive
+                                  ? "bg-primary/10 text-primary"
+                                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                              )}
+                              onClick={onClose}
+                            >
+                              {child.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
                     )}
-                  />
+                  </div>
+                );
+              }
+              const isActive = location.pathname === item.href;
+              return (
+                <Link key={item.name} to={item.href!} className={cn("group flex items-center px-3 py-2 text-sm font-medium rounded-md mb-1 transition-colors", isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-accent-foreground")} onClick={onClose}>
+                  <item.icon className={cn("mr-3 h-5 w-5 flex-shrink-0", isActive ? "text-primary" : "text-muted-foreground group-hover:text-accent-foreground")} />
                   {item.name}
                 </Link>
-              )
+              );
             })}
           </div>
         </nav>

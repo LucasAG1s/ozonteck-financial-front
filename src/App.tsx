@@ -1,5 +1,5 @@
 // App.tsx
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Outlet } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastContainer } from 'react-toastify'
 import { AuthProvider } from '@/contexts/AuthContext'
@@ -13,7 +13,7 @@ import { Entries } from './features/entries/Entries'
 import { Expenses } from './features/expenses/Expenses'
 import { Reports } from './features/relatorios/Relatorios'
 import { Employees } from './features/employees/Employees'
-import { EmployeeEditPage } from './features/employees/EmployeeEditPage' // Importar a nova página
+import { EmployeeEditPage } from './features/employees/EmployeeEditPage' 
 import { Pagamentos } from './features/pagamentos/Pagamentos'
 import { SupplierEditPage } from './features/suppliers/SupplierEditPage'
 import { Integracoes } from './features/integracoes/Integracoes'
@@ -82,7 +82,7 @@ function App() {
                 }
               />
               <Route
-                path="cashflow"
+                path="cash-flow"
                 element={
                   <ProtectedRoute requiredPermission="cashflow">
                     <CashFlow />
@@ -109,7 +109,7 @@ function App() {
                 path="employees/*"
                 element={
                   <ProtectedRoute requiredPermission="employees">
-                    <Employees />
+                    <Outlet />
                   </ProtectedRoute>
                 }
               >

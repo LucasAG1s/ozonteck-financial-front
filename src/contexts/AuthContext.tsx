@@ -26,6 +26,7 @@ export interface User {
   created_at: string
   updated_at: string
   roles: Role[]
+  avatar: string | null
   permissions: {
     dashboard: boolean
     plans: boolean

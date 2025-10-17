@@ -13,21 +13,32 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { Employee, getEmployees, createEmployee, updateEmployee, deleteEmployee, CreateEmployeePayload, UpdateEmployeePayload } from '@/lib/services/hr/employees.service'
-import { getSectors } from '@/lib/services/hr/sectors.service'
+import { AvatarWithTemporaryUrl } from '@/components/ui/AvatarWithTemporaryUrl'
 import { useCompanies } from '@/hooks/useCompanies'
 import { formatCurrency, formatCPF } from '@/lib/utils'
 import { toast } from 'react-toastify'
 
 const employeeSchema = z.object({
   name: z.string().min(3, 'O nome é obrigatório.'),
-  cpf: z.string().min(11, 'O CPF é obrigatório.'),
-  position: z.string().min(3, 'O cargo é obrigatório.'),
-  base_salary: z.coerce.string().min(1, 'O salário base é obrigatório.'),
-  admission_date: z.string().min(1, 'A data de admissão é obrigatória.'),
   phone: z.string().min(10, 'O telefone é obrigatório.'),
   email: z.string().email('O e-mail é inválido.'),
+  document_number: z.string().min(11, 'O CPF/CNPJ é obrigatório.'),
   company_id: z.coerce.number().min(1, 'A empresa é obrigatória.'),
-  sector_id:z.coerce.number().min(1, 'O setor é obrigatório.'),
+  active: z.boolean().default(true),
+  avatar: z.any()
+    .transform((value) => {
+      if (value instanceof FileList) return value[0] || null;
+      return value;
+    })
+    .refine(
+      (file) => !(file instanceof File) || file.size <= 2 * 1024 * 1024, // 2MB
+      `O tamanho máximo da foto é de 2MB.`
+    )
+    .refine(
+      (file) => !(file instanceof File) || ['image/jpeg', 'image/png', 'image/webp'].includes(file.type),
+      "Formato de arquivo inválido. Use JPG, PNG ou WebP."
+    )
+    .optional().nullable(),
 });
 
 export function Employees() {
@@ -36,7 +47,6 @@ export function Employees() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [sectorFilter, setSectorFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
@@ -47,14 +57,9 @@ export function Employees() {
     queryKey: ['employees', selectedCompany?.id],
     queryFn: () => getEmployees(selectedCompany!.id),
     enabled: !!selectedCompany,
-    staleTime: 1000 * 60, // 1 minuto
+    staleTime: 1000 * 60 * 6, 
   });
 
-  const {data:sectors = [], isLoading: isLoadingSectors} =useQuery({
-    queryKey: ['sectors', selectedCompany?.id],
-    queryFn: () => getSectors(selectedCompany!.id),
-    staleTime: 1000 * 60 * 60, // 1 hora
-  })
 
   const { mutate: createEmployeeMutation, isPending: isCreating } = useMutation({
     mutationFn: createEmployee,
@@ -87,18 +92,20 @@ export function Employees() {
   });
 
   const filteredEmployees = useMemo(() => employees.filter(employee => {
+    const employeeContract = employee.contracts?.[0];
     const matchSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       employee.cpf.includes(searchTerm) ||
-                       employee.position.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchStatus = !statusFilter || employee.status === statusFilter;
-    const matchSector = !sectorFilter || employee.sector_id === Number(sectorFilter);
-    return matchSearch && matchStatus && matchSector;
-  }), [employees, searchTerm, statusFilter, sectorFilter]);
+                       (employee.data.cpf && employee.data.cpf.includes(searchTerm)) ||
+                       (employeeContract?.position && employeeContract.position.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchStatus = !statusFilter || 
+                       (statusFilter === 'ativo' && employee.active) || 
+                       (statusFilter === 'inativo' && !employee.active);
+    return matchSearch && matchStatus;
+  }), [employees, searchTerm, statusFilter]);
 
-  const activeEmployeesCount = employees.filter(c => c.status === 'ativo').length;
+  const activeEmployeesCount = employees.filter(c => c.active).length;
   const totalPayroll = employees
-    .filter(c => c.status === 'ativo')
-    .reduce((sum, c) => sum + Number(c.base_salary), 0); // Usar base_salary
+    .filter(c => c.active)
+    .reduce((sum, c) => sum + Number(c.contracts?.[0]?.salary || 0), 0);
 
   const handleFormSubmit = (data: z.infer<typeof employeeSchema>) => {
     if (employeeToEdit) {
@@ -109,7 +116,6 @@ export function Employees() {
   };
 
   const handleEditClick = (employee: Employee) => {
-    // Navega para a nova página de edição
     navigate(`/employees/edit/${employee.id}`);
   };
 
@@ -131,21 +137,8 @@ export function Employees() {
 
   const formFields: FormFieldConfig<typeof employeeSchema>[] = [
     { name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Nome do colaborador', gridCols: 2, disabled: false},
-    { name: 'cpf', label: 'CPF', type: 'text', placeholder: '000.000.000-00', gridCols: 1 , disabled: false},
-    { name: 'phone', label: 'Telefone', type: 'text', placeholder: '(00) 00000-0000', gridCols: 1, disabled: false},
-    { name: 'email', label: 'E-mail', type: 'email', placeholder: 'colaborador@empresa.com', gridCols: 1 , disabled: false},
-    { name: 'position', label: 'Cargo', type: 'text', placeholder: 'Ex: Desenvolvedor', gridCols: 1,  disabled: false},
-    { name: 'base_salary', label: 'Salário Base', type: 'number', placeholder: '0,00', step: '0.01', gridCols: 1, disabled: false},
-    { name: 'admission_date', label: 'Data de Admissão', type: 'date', gridCols: 1, disabled: false},
-    {
-      name: 'sector_id',
-      label: 'Setor',
-      type: 'select',
-      placeholder: 'Selecione o setor',
-      options: sectors.map(sector => ({ value: sector.id, label: sector.name })),
-      gridCols: 1,
-      disabled: false,
-    },
+    { name: 'phone', label: 'Telefone', type: 'text', placeholder: '(00) 00000-0000', gridCols: 1, disabled: false },
+    { name: 'email', label: 'E-mail', type: 'email', placeholder: 'colaborador@empresa.com', gridCols: 1, disabled: false },
     {
       name: 'company_id',
       label: 'Empresa',
@@ -153,8 +146,10 @@ export function Employees() {
       placeholder: 'Empresa',
       options: selectedCompany ? [{ value: selectedCompany.id, label: selectedCompany.corporate_name }] : [],
       gridCols: 1,
-      disabled: false,
+      disabled: true,
     },
+    { name:'document_number', label: 'CPF/CNPJ',type:'text', placeholder:'000.000.000-00', gridCols: 1, disabled: false},
+    { name: 'avatar', label: 'Foto', type: 'file', accept: '.png,.jpg,.jpeg,.webp', gridCols: 2, disabled: false },
   ];
 
   return (
@@ -225,21 +220,6 @@ export function Employees() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div>
-              <Label htmlFor="filtroSector">Setor</Label>
-              <Select onValueChange={(value) => setSectorFilter(value === "all" ? "" : value)} value={sectorFilter || "all"}>
-                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {sectors.map((sector) =>
-                    <SelectItem key={sector.id} value={ String(sector.id)}>
-                      {sector.name}
-                    </SelectItem> )
-                  }
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -254,8 +234,7 @@ export function Employees() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Cargo</TableHead>
-                <TableHead>Salário</TableHead>
-                <TableHead>Admissão</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -269,21 +248,24 @@ export function Employees() {
               ))}
               {filteredEmployees.map((employee) => (
                 <TableRow key={employee.id}>
-                  <TableCell className="font-medium">
-                    <div>{employee.name}</div>
-                    <div className="text-xs text-muted-foreground">{formatCPF(employee.cpf)}</div>
+                  <TableCell className="font-medium justify-center "> 
+                    <div className="flex items-center gap-3">
+                      <AvatarWithTemporaryUrl path={employee.data?.avatar} fallback={employee.name.charAt(0).toUpperCase()} />
+                      <div>{employee.name}
+                          <div className="text-xs text-muted-start mt-2">{formatCPF(employee.data.document_number)}</div>
+                      </div>
+                    </div>
                   </TableCell>
-                  <TableCell>{employee.position}</TableCell>
-                  <TableCell className="font-medium">{formatCurrency(Number(employee.base_salary))}</TableCell> {/* Usar base_salary */}
-                  <TableCell>{new Date(employee.admission_date).toLocaleDateString()}</TableCell>
+                  <TableCell>{employee.contracts?.[0]?.position || 'N/A'}</TableCell>
+                  <TableCell>{employee.email}</TableCell>
                   <TableCell>{employee.phone}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs ${
-                      employee.status === 'ativo' 
+                      employee.active
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {employee.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                      {employee.active ? 'Ativo' : 'Inativo'}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
@@ -315,8 +297,8 @@ export function Employees() {
         isOpen={isModalOpen}
         onOpenChange={(isOpen) => { if (!isOpen) setEmployeeToEdit(null); setIsModalOpen(isOpen); }}
         onSubmit={handleFormSubmit}
-        isLoading={isCreating}
-        initialData={employeeToEdit}
+        isLoading={isCreating || isUpdating}
+        initialData={employeeToEdit ?? { company_id: selectedCompany?.id }}
         fields={formFields}
         schema={employeeSchema}
         title={employeeToEdit ? 'Editar Colaborador' : 'Novo Colaborador'}

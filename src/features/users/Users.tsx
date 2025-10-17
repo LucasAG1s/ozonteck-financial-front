@@ -1,302 +1,213 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { Plus, Search, Users, Shield, Key, Edit, Trash2, Eye, EyeOff } from 'lucide-react'
+import { Plus, Search, Users, Shield, Key, Edit, Trash2 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { GenericForm } from '@/components/forms/GenericForm'
+import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
+import { AvatarWithTemporaryUrl } from '@/components/ui/AvatarWithTemporaryUrl'
+import { User, getUsers, createUser, updateUser, deleteUser, CreateUserPayload, UpdateUserPayload, syncUserPermissions } from '@/lib/services/users.service'
+import { Permission, getPermissions } from '@/lib/services/permissions.service'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'react-toastify'
 
-interface Usuario {
-  id: string
-  nome: string
-  email: string
-  nivel: 'master' | 'gerente' | 'auxiliar'
-  status: 'ativo' | 'inativo'
-  ultimoAcesso?: Date
-  dataCriacao: Date
-  permissoes: {
-    dashboard: boolean
-    empresas: boolean
-    entradas: boolean
-    saidas: boolean
-    relatorios: boolean
-    colaboradores: boolean
-    pagamentos: boolean
-    integracoes: boolean
-    usuarios: boolean
-  }
-}
-
-const usuariosIniciais: Usuario[] = [
-  {
-    id: '1',
-    nome: 'Admin Sistema',
-    email: 'admin@empresa.com',
-    nivel: 'master',
-    status: 'ativo',
-    ultimoAcesso: new Date('2024-01-15T10:30:00'),
-    dataCriacao: new Date('2023-01-01'),
-    permissoes: {
-      dashboard: true,
-      empresas: true,
-      entradas: true,
-      saidas: true,
-      relatorios: true,
-      colaboradores: true,
-      pagamentos: true,
-      integracoes: true,
-      usuarios: true
-    }
-  },
-  {
-    id: '2',
-    nome: 'Maria Gerente',
-    email: 'maria.gerente@empresa.com',
-    nivel: 'gerente',
-    status: 'ativo',
-    ultimoAcesso: new Date('2024-01-15T09:15:00'),
-    dataCriacao: new Date('2023-03-15'),
-    permissoes: {
-      dashboard: true,
-      empresas: true,
-      entradas: true,
-      saidas: true,
-      relatorios: true,
-      colaboradores: true,
-      pagamentos: true,
-      integracoes: false,
-      usuarios: false
-    }
-  },
-  {
-    id: '3',
-    nome: 'João Auxiliar',
-    email: 'joao.auxiliar@empresa.com',
-    nivel: 'auxiliar',
-    status: 'ativo',
-    ultimoAcesso: new Date('2024-01-14T16:45:00'),
-    dataCriacao: new Date('2023-06-10'),
-    permissoes: {
-      dashboard: true,
-      empresas: false,
-      entradas: true,
-      saidas: true,
-      relatorios: false,
-      colaboradores: false,
-      pagamentos: false,
-      integracoes: false,
-      usuarios: false
-    }
-  },
-  {
-    id: '4',
-    nome: 'Ana Financeiro',
-    email: 'ana.financeiro@empresa.com',
-    nivel: 'auxiliar',
-    status: 'inativo',
-    ultimoAcesso: new Date('2024-01-10T14:20:00'),
-    dataCriacao: new Date('2023-08-20'),
-    permissoes: {
-      dashboard: true,
-      empresas: false,
-      entradas: true,
-      saidas: true,
-      relatorios: true,
-      colaboradores: false,
-      pagamentos: true,
-      integracoes: false,
-      usuarios: false
-    }
-  }
-]
-
-const permissoesPorNivel = {
-  master: {
-    dashboard: true,
-    empresas: true,
-    entradas: true,
-    saidas: true,
-    relatorios: true,
-    colaboradores: true,
-    pagamentos: true,
-    integracoes: true,
-    usuarios: true
-  },
-  gerente: {
-    dashboard: true,
-    empresas: true,
-    entradas: true,
-    saidas: true,
-    relatorios: true,
-    colaboradores: true,
-    pagamentos: true,
-    integracoes: false,
-    usuarios: false
-  },
-  auxiliar: {
-    dashboard: true,
-    empresas: false,
-    entradas: true,
-    saidas: true,
-    relatorios: false,
-    colaboradores: false,
-    pagamentos: false,
-    integracoes: false,
-    usuarios: false
-  }
-}
+const userSchema = z.object({
+  name: z.string().min(3, 'O nome é obrigatório.'),
+  email: z.string().email('O e-mail é inválido.'),
+  login:z.string().min(3, 'O login é obrigatório.'),
+  password: z.string().optional().refine(
+    (val) => {
+      if (!val) return true;
+      const hasUpperCase = /[A-Z]/.test(val);
+      const hasLowerCase = /[a-z]/.test(val);
+      const hasNumber = /[0-9]/.test(val);
+      const hasMinLength = val.length >= 8;
+      return hasUpperCase && hasLowerCase && hasNumber && hasMinLength;
+    },
+    { message: "A senha deve ter no mínimo 8 caracteres, com maiúsculas, minúsculas e números." }
+  ),
+  role: z.string().min(1, "O perfil é obrigatório."), // Ajustado para string para compatibilidade com o form
+  status: z.enum(['ativo', 'inativo']),
+  avatar: z.any()
+    .transform((value) => {
+      if (value instanceof FileList) return value[0] || null;
+      return value;
+    })
+    .refine(
+      (file) => !(file instanceof File) || file.size <= 2 * 1024 * 1024, // 2MB
+      `O tamanho máximo do avatar é de 2MB.`
+    )
+    .refine(
+      (file) => !(file instanceof File) || ['image/jpeg', 'image/png', 'image/webp'].includes(file.type),
+      "Formato de arquivo inválido. Use JPG, PNG ou WebP."
+    )
+    .optional().nullable(),
+});
 
 export function Usuarios() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>(usuariosIniciais)
-  const [busca, setBusca] = useState('')
-  const [filtroNivel, setFiltroNivel] = useState('')
-  const [filtroStatus, setFiltroStatus] = useState('')
-  const [modalAberto, setModalAberto] = useState(false)
+  const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [modalPermissoesAberto, setModalPermissoesAberto] = useState(false)
-  const [usuarioEditando, setUsuarioEditando] = useState<Usuario | null>(null)
-  const [usuarioPermissoes, setUsuarioPermissoes] = useState<Usuario | null>(null)
-  const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [userToEdit, setUserToEdit] = useState<User | null>(null); // Usuário para o form de edição
+  const [userToManagePermissions, setUserToManagePermissions] = useState<User | null>(null); // Usuário para o modal de permissões
+  const [selectedPermissions, setSelectedPermissions] = useState<Set<number>>(new Set());
+  const [userToDelete, setUserToDelete] = useState<number | null>(null);
 
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: getUsers,
+    staleTime: 1000 * 60 * 5, 
+  });
 
-  const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    senha: '',
-    nivel: 'auxiliar' as 'master' | 'gerente' | 'auxiliar',
-    status: 'ativo' as 'ativo' | 'inativo'
-  })
+  const { data: allPermissions = [] } = useQuery({
+    queryKey: ['permissions'],
+    queryFn: getPermissions,
+    staleTime: 1000 * 60 * 60, 
+  });
 
-  const usuariosFiltrados = usuarios.filter(usuario => {
-    const matchBusca = usuario.nome.toLowerCase().includes(busca.toLowerCase()) ||
-                      usuario.email.toLowerCase().includes(busca.toLowerCase())
-    const matchNivel = !filtroNivel || usuario.nivel === filtroNivel
-    const matchStatus = !filtroStatus || usuario.status === filtroStatus
+  const { mutate: createUserMutation, isPending: isCreating } = useMutation({
+    mutationFn: createUser,
+    onSuccess: () => {
+      toast.success("Usuário criado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsModalOpen(false);
+    },
+    onError: (error: Error) => toast.error(`Erro ao criar: ${error.message}`),
+  });
+
+  const { mutate: updateUserMutation, isPending: isUpdating } = useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: UpdateUserPayload }) => updateUser(id, payload),
+    onSuccess: () => {
+      toast.success("Usuário atualizado com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsModalOpen(false);
+    },
+    onError: (error: Error) => toast.error(`Erro ao atualizar: ${error.message}`),
+  });
+
+  const { mutate: deleteUserMutation, isPending: isDeleting } = useMutation({
+    mutationFn: deleteUser,
+    onSuccess: () => {
+      toast.success("Usuário excluído com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setIsAlertOpen(false);
+    },
+    onError: (error: Error) => toast.error(`Erro ao excluir: ${error.message}`),
+  });
+
+  const { mutate: syncPermissionsMutation, isPending: isSyncingPermissions } = useMutation({
+    mutationFn: ({ userId, permissionIds }: { userId: number, permissionIds: number[] }) => syncUserPermissions(userId, permissionIds),
+    onSuccess: () => {
+      toast.success("Permissões atualizadas com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['users'] }); // Invalida a query de usuários para buscar os dados atualizados
+      setModalPermissoesAberto(false);
+      setUserToManagePermissions(null);
+    },
+    onError: (error: Error) => toast.error(`Erro ao salvar permissões: ${error.message}`),
+  });
+
+  const filteredUsers = useMemo(() => users.filter(user => {
+    const matchSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      user.email.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchRole = !roleFilter || (user.roles && user.roles[0] && user.roles[0].name.toLowerCase() === roleFilter);
+    const matchStatus = !statusFilter || user.status === statusFilter
     
-    return matchBusca && matchNivel && matchStatus
-  })
+    return matchSearch && matchRole && matchStatus
+  }), [users, searchTerm, roleFilter, statusFilter]);
 
-  const usuariosAtivos = usuarios.filter(u => u.status === 'ativo').length
-  const usuariosMaster = usuarios.filter(u => u.nivel === 'master').length
-  const usuariosGerente = usuarios.filter(u => u.nivel === 'gerente').length
-  const usuariosAuxiliar = usuarios.filter(u => u.nivel === 'auxiliar').length
+  const activeUsersCount = users.filter(u => u.status === 'ativo').length;
+  const masterUsersCount = users.filter(u => u.roles && u.roles[0]?.name.toLowerCase() === 'master').length;
+  const managerUsersCount = users.filter(u => u.roles && u.roles[0]?.name.toLowerCase() === 'gerente').length;
+  const auxUsersCount = users.filter(u => u.roles && u.roles[0]?.name.toLowerCase() === 'auxiliar').length;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (usuarioEditando) {
-      // Editando usuário existente
-      const usuarioAtualizado: Usuario = {
-        ...usuarioEditando,
-        nome: formData.nome,
-        email: formData.email,
-        nivel: formData.nivel,
-        status: formData.status,
-        permissoes: permissoesPorNivel[formData.nivel]
-      }
-      
-      setUsuarios(usuarios.map(u => 
-        u.id === usuarioEditando.id ? usuarioAtualizado : u
-      ))
-      
-      toast.success("Os dados do usuário foram atualizados com sucesso.")
-    } else {
-      // Novo usuário
-      const novoUsuario: Usuario = {
-        id: Date.now().toString(),
-        nome: formData.nome,
-        email: formData.email,
-        nivel: formData.nivel,
-        status: formData.status,
-        dataCriacao: new Date(),
-        permissoes: permissoesPorNivel[formData.nivel]
-      }
-      
-      setUsuarios([novoUsuario, ...usuarios])
-      toast.success("Novo usuário foi criado com sucesso.")
+  const handleFormSubmit = (data: z.infer<typeof userSchema>) => {
+    const payload = { ...data };
+    if (userToEdit && !payload.password) {
+      delete payload.password;
     }
-    
-    setModalAberto(false)
-    setUsuarioEditando(null)
-    resetForm()
-  }
 
-  const resetForm = () => {
-    setFormData({
-      nome: '',
-      email: '',
-      senha: '',
-      nivel: 'auxiliar',
-      status: 'ativo'
-    })
-  }
+    if (userToEdit) {
+      updateUserMutation({ id: userToEdit.id, payload });
+    } else {
+      createUserMutation(payload as CreateUserPayload);
+    }
+  };
 
-  const handleEditar = (usuario: Usuario) => {
-    setUsuarioEditando(usuario)
-    setFormData({
-      nome: usuario.nome,
-      email: usuario.email,
-      senha: '',
-      nivel: usuario.nivel,
-      status: usuario.status
-    })
-    setModalAberto(true)
-  }
+  const handleEditClick = (user: User) => {
+    const userWithRoleName = {
+      ...user,
+      role: user.roles[0]?.name|| 'auxiliar'
+    };
+    setUserToEdit(userWithRoleName as any);
+    setIsModalOpen(true);
+  };
 
-  const handleExcluir = (id: string) => {
-    setUsuarios(usuarios.filter(u => u.id !== id))
-    toast.success("O usuário foi removido do sistema.")
-  }
+  const handleDeleteClick = (id: number) => {
+    setUserToDelete(id);
+    setIsAlertOpen(true);
+  };
 
-  const handleNovoUsuario = () => {
-    setUsuarioEditando(null)
-    resetForm()
-    setModalAberto(true)
-  }
+  const confirmDelete = () => {
+    if (userToDelete) {
+      deleteUserMutation(userToDelete);
+    }
+  };
 
-  const handleGerenciarPermissoes = (usuario: Usuario) => {
-    setUsuarioPermissoes(usuario)
+  const handleOpenNewModal = () => {
+    setUserToEdit(null);
+    setIsModalOpen(true);
+  };
+
+  const handleManagePermissionsClick = (user: User) => {
+    setUserToManagePermissions(user);
+    const currentUserPermissionIds = new Set(user.permissions.map(p => p.id));
+    setSelectedPermissions(currentUserPermissionIds);
     setModalPermissoesAberto(true)
   }
 
   const handleSalvarPermissoes = () => {
-    if (usuarioPermissoes) {
-      setUsuarios(usuarios.map(u => 
-        u.id === usuarioPermissoes.id ? usuarioPermissoes : u
-      ))
-      
-      toast.success("As permissões do usuário foram atualizadas.")
+    if (userToManagePermissions) {
+      syncPermissionsMutation({
+        userId: userToManagePermissions.id,
+        permissionIds: Array.from(selectedPermissions),
+      });
     }
-    
-    setModalPermissoesAberto(false)
-    setUsuarioPermissoes(null)
   }
 
-  const handlePermissaoChange = (modulo: keyof Usuario['permissoes'], valor: boolean) => {
-    if (usuarioPermissoes) {
-      setUsuarioPermissoes({
-        ...usuarioPermissoes,
-        permissoes: {
-          ...usuarioPermissoes.permissoes,
-          [modulo]: valor
-        }
-      })
-    }
-  }
+  const handlePermissionChange = (permissionId: number, isChecked: boolean) => {
+    setSelectedPermissions(prev => {
+      const newSet = new Set(prev);
+      if (isChecked) {
+        newSet.add(permissionId);
+      } else {
+        newSet.delete(permissionId);
+      }
+      return newSet;
+    });
+  };
 
   const getNivelColor = (nivel: string) => {
-    switch (nivel) {
-      case 'master': return 'bg-red-100 text-red-800'
-      case 'gerente': return 'bg-blue-100 text-blue-800'
-      case 'auxiliar': return 'bg-green-100 text-green-800'
+    switch (nivel?.toLowerCase()) {
+      case 'Admin': return 'bg-red-100 text-red-800'
+      case 'Gerente': return 'bg-blue-100 text-blue-800'
+      case 'Auxiliar': return 'bg-green-100 text-green-800'
       default: return 'bg-muted text-muted-foreground'
     }
   }
 
   const getNivelLabel = (nivel: string) => {
-    switch (nivel) {
+    switch (nivel?.toLowerCase()) {
       case 'master': return 'Master'
       case 'gerente': return 'Gerente'
       case 'auxiliar': return 'Auxiliar'
@@ -304,20 +215,12 @@ export function Usuarios() {
     }
   }
 
-  const getModuloLabel = (modulo: string) => {
-    const labels: Record<string, string> = {
-      dashboard: 'Dashboard',
-      empresas: 'Empresas',
-      entradas: 'Entradas',
-      saidas: 'Saídas',
-      relatorios: 'Relatórios',
-      colaboradores: 'Colaboradores',
-      pagamentos: 'Pagamentos',
-      integracoes: 'Integrações',
-      usuarios: 'Usuários'
-    }
-    return labels[modulo] || modulo
-  }
+  const groupedPermissions = useMemo(() => {
+    return allPermissions.reduce((acc, permission) => {
+      (acc[permission.group] = acc[permission.group] || []).push(permission);
+      return acc;
+    }, {} as Record<string, Permission[]>);
+  }, [allPermissions]);
 
   return (
     <div className="space-y-6">
@@ -326,148 +229,52 @@ export function Usuarios() {
           <h1 className="text-3xl font-bold text-foreground">Controle de Acessos</h1>
           <p className="text-muted-foreground">Gerencie usuários e permissões do sistema</p>
         </div>
-        
-        <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-          <DialogTrigger asChild>
-            <Button onClick={handleNovoUsuario}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Usuário
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {usuarioEditando ? 'Editar Usuário' : 'Novo Usuário'}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="nome">Nome Completo</Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({...formData, nome: e.target.value})}
-                  placeholder="Nome completo do usuário"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  placeholder="usuario@empresa.com"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="senha">Senha {usuarioEditando && '(deixe vazio para manter)'}</Label>
-                <div className="relative">
-                  <Input
-                    id="senha"
-                    type={mostrarSenha ? 'text' : 'password'}
-                    value={formData.senha}
-                    onChange={(e) => setFormData({...formData, senha: e.target.value})}
-                    placeholder="Senha do usuário"
-                    required={!usuarioEditando}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3"
-                    onClick={() => setMostrarSenha(!mostrarSenha)}
-                  >
-                    {mostrarSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="nivel">Nível de Acesso</Label>
-                  <select
-                    id="nivel"
-                    value={formData.nivel}
-                    onChange={(e) => setFormData({...formData, nivel: e.target.value as any})}
-                    className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md"
-                  >
-                    <option value="auxiliar">Auxiliar</option>
-                    <option value="gerente">Gerente</option>
-                    <option value="master">Master</option>
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <select
-                    id="status"
-                    value={formData.status}
-                    onChange={(e) => setFormData({...formData, status: e.target.value as any})}
-                    className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md"
-                  >
-                    <option value="ativo">Ativo</option>
-                    <option value="inativo">Inativo</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setModalAberto(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {usuarioEditando ? 'Atualizar' : 'Cadastrar'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={handleOpenNewModal}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Usuário
+        </Button>
       </div>
 
-      {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Usuários Ativos</p>
-                <p className="text-3xl font-bold text-green-600">{usuariosAtivos}</p>
+                {isLoading ? <Skeleton className="h-8 w-16 mt-1" /> : <p className="text-3xl font-bold text-green-600">{activeUsersCount}</p>}
               </div>
               <Users className="h-8 w-8 text-green-600" />
             </div>
           </CardContent>
         </Card>
-        
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Masters</p>
-                <p className="text-3xl font-bold text-red-600">{usuariosMaster}</p>
+                {isLoading ? <Skeleton className="h-8 w-16 mt-1" /> : <p className="text-3xl font-bold text-red-600">{masterUsersCount}</p>}
               </div>
               <Shield className="h-8 w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
-        
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Gerentes</p>
-                <p className="text-3xl font-bold text-blue-600">{usuariosGerente}</p>
+                {isLoading ? <Skeleton className="h-8 w-16 mt-1" /> : <p className="text-3xl font-bold text-blue-600">{managerUsersCount}</p>}
               </div>
               <Key className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
-        
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Auxiliares</p>
-                <p className="text-3xl font-bold text-purple-600">{usuariosAuxiliar}</p>
+                {isLoading ? <Skeleton className="h-8 w-16 mt-1" /> : <p className="text-3xl font-bold text-purple-600">{auxUsersCount}</p>}
               </div>
               <Users className="h-8 w-8 text-purple-600" />
             </div>
@@ -475,7 +282,6 @@ export function Usuarios() {
         </Card>
       </div>
 
-      {/* Filtros */}
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
@@ -486,47 +292,36 @@ export function Usuarios() {
               <Label htmlFor="busca">Buscar</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="busca"
-                  placeholder="Nome ou e-mail..."
-                  value={busca}
-                  onChange={(e) => setBusca(e.target.value)}
-                  className="pl-10"
-                />
+                <Input id="busca" placeholder="Nome ou e-mail..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
               </div>
             </div>
             <div>
               <Label htmlFor="filtroNivel">Nível</Label>
-              <select
-                id="filtroNivel"
-                value={filtroNivel}
-                onChange={(e) => setFiltroNivel(e.target.value)}
-                className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md"
-              >
-                <option value="">Todos os níveis</option>
-                <option value="master">Master</option>
-                <option value="gerente">Gerente</option>
-                <option value="auxiliar">Auxiliar</option>
-              </select>
+              <Select onValueChange={(value) => setRoleFilter(value === "all" ? "" : value)} value={roleFilter || "all"}>
+                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os níveis</SelectItem>
+                  <SelectItem value="master">Master</SelectItem>
+                  <SelectItem value="gerente">Gerente</SelectItem>
+                  <SelectItem value="auxiliar">Auxiliar</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="filtroStatus">Status</Label>
-              <select
-                id="filtroStatus"
-                value={filtroStatus}
-                onChange={(e) => setFiltroStatus(e.target.value)}
-                className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md"
-              >
-                <option value="">Todos os status</option>
-                <option value="ativo">Ativo</option>
-                <option value="inativo">Inativo</option>
-              </select>
+              <Select onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)} value={statusFilter || "all"}>
+                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="inativo">Inativo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabela */}
       <Card>
         <CardHeader>
           <CardTitle>Lista de Usuários</CardTitle>
@@ -537,42 +332,46 @@ export function Usuarios() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
-                <TableHead>Nível</TableHead>
+                <TableHead>Perfil</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Último Acesso</TableHead>
                 <TableHead>Data Criação</TableHead>
-                <TableHead>Ações</TableHead>
+                <TableHead className='text-center'>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {usuariosFiltrados.map((usuario) => (
-                <TableRow key={usuario.id}>
-                  <TableCell className="font-medium">{usuario.nome}</TableCell>
-                  <TableCell>{usuario.email}</TableCell>
+              {isLoading && Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+              ))}
+              {filteredUsers.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-3">
+                      <AvatarWithTemporaryUrl path={user.avatar} fallback={user.name.charAt(0).toUpperCase()} />
+                      <span>{user.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${getNivelColor(usuario.nivel)}`}>
-                      {getNivelLabel(usuario.nivel)}
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getNivelColor(user.roles[0]?.name)}`}>
+                      {getNivelLabel(user.roles[0]?.name || 'auxiliar')}
                     </span>
                   </TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs ${
-                      usuario.status === 'ativo' 
+                      user.status === 'ativo' 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {usuario.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                      {user.status === 'ativo' ? 'Ativo' : 'Inativo'}
                     </span>
                   </TableCell>
+                  <TableCell>{formatDate(new Date(user.created_at))}</TableCell>
                   <TableCell>
-                    {usuario.ultimoAcesso ? formatDate(usuario.ultimoAcesso) : 'Nunca'}
-                  </TableCell>
-                  <TableCell>{formatDate(usuario.dataCriacao)}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
+                    <div className=" space-x-2 text-center">
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        onClick={() => handleGerenciarPermissoes(usuario)}
+                        onClick={() => handleManagePermissionsClick(user)}
                         title="Gerenciar Permissões"
                       >
                         <Shield className="h-4 w-4" />
@@ -580,7 +379,7 @@ export function Usuarios() {
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        onClick={() => handleEditar(usuario)}
+                        onClick={() => handleEditClick(user)}
                         title="Editar Usuário"
                       >
                         <Edit className="h-4 w-4" />
@@ -588,10 +387,10 @@ export function Usuarios() {
                       <Button 
                         variant="ghost" 
                         size="icon"
-                        onClick={() => handleExcluir(usuario.id)}
+                        onClick={() => handleDeleteClick(user.id)}
                         title="Excluir Usuário"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </TableCell>
@@ -602,31 +401,33 @@ export function Usuarios() {
         </CardContent>
       </Card>
 
-      {/* Modal de Permissões */}
       <Dialog open={modalPermissoesAberto} onOpenChange={setModalPermissoesAberto}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>
-              Permissões - {usuarioPermissoes?.nome}
+              Permissões - {userToManagePermissions?.name}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {usuarioPermissoes && Object.entries(usuarioPermissoes.permissoes).map(([modulo, permitido]) => (
-                <div key={modulo} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id={modulo}
-                    checked={permitido}
-                    onChange={(e) => handlePermissaoChange(modulo as keyof Usuario['permissoes'], e.target.checked)}
-                    className="rounded border-gray-300"
-                  />
-                  <Label htmlFor={modulo} className="text-sm font-medium">
-                    {getModuloLabel(modulo)}
-                  </Label>
+            {Object.entries(groupedPermissions).map(([groupName, permissions]) => (
+              <div key={groupName}>
+                <h4 className="font-semibold mb-2 border-b pb-1">{groupName}</h4>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  {permissions.map(permission => (
+                    <div key={permission.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`permission-${permission.id}`}
+                        checked={selectedPermissions.has(permission.id)}
+                        onChange={(e) => handlePermissionChange(permission.id, e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <Label htmlFor={`perm-${permission.id}`} className="text-sm font-normal" title={permission.description}>{permission.description}</Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
             <div className="flex justify-end space-x-2">
               <Button 
                 type="button" 
@@ -635,13 +436,41 @@ export function Usuarios() {
               >
                 Cancelar
               </Button>
-              <Button onClick={handleSalvarPermissoes}>
-                Salvar Permissões
+              <Button onClick={handleSalvarPermissoes} disabled={isSyncingPermissions}>
+                {isSyncingPermissions ? 'Salvando...' : 'Salvar Permissões'}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      <GenericForm
+        isOpen={isModalOpen}
+        onOpenChange={(isOpen) => { if (!isOpen) setUserToEdit(null); setIsModalOpen(isOpen); }}
+        onSubmit={handleFormSubmit}
+        isLoading={isCreating || isUpdating}
+        initialData={userToEdit}
+        fields={[
+          { name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Nome do usuário', gridCols: 2, disabled: false },
+          { name: 'email', label: 'E-mail', type: 'email', placeholder: 'usuario@empresa.com', gridCols: 2, disabled: false },
+          { name: 'login', label: 'Login', type: 'text', placeholder: 'Login de acesso', gridCols: 2, disabled: false },
+          { name: 'password', label: `Senha ${userToEdit ? '(deixe vazio para manter)' : ''}`, type: 'password', placeholder: 'Senha de acesso', gridCols: 2, disabled: false },
+          { name: 'role', label: 'Perfil de Acesso', type: 'select', options: [{ value: 'Auxiliar', label: 'Auxiliar' }, { value: 'Gerente', label: 'Gerente' }, { value: 'Admin', label: 'Admin' }], gridCols: 1, disabled: false },
+          { name: 'status', label: 'Status', type: 'select', options: [{ value: 'ativo', label: 'Ativo' }, { value: 'inativo', label: 'Inativo' }], gridCols: 1, disabled: false },
+          { name: 'avatar', label: 'Avatar', type: 'file', accept: '.png,.jpg,.jpeg,.webp', placeholder: 'Selecione uma imagem ',gridCols: 2, disabled: false },
+        ]}
+        schema={userSchema}
+        title={userToEdit ? 'Editar Usuário' : 'Novo Usuário'}
+        description="Preencha as informações para gerenciar o acesso do usuário."
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={isAlertOpen}
+        onOpenChange={setIsAlertOpen}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+        description="Essa ação não pode ser desfeita. Isso irá excluir permanentemente o usuário."
+      />
     </div>
   )
 }

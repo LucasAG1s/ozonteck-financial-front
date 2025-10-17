@@ -1,6 +1,6 @@
 import api, { handleApiError } from "@/lib/axios";
 import { BankAccount } from "./banks.service";
-import { Supplier } from "./supllier.service";
+import { Supplier } from "./suppliers.service";
 import { AccountPlan } from "./account-plan.service";
 import { PaymentMethod } from "./payment-methods.service";
 
@@ -24,8 +24,21 @@ export interface Expense {
 }
 
 
-export type CreateExpensePayload = Omit<Expense, 'id' | 'created_at' | 'updated_at' | 'supplier' | 'account_plan' | 'bank' | 'payment_method'>;
-export type UpdateExpensePayload = Partial<CreateExpensePayload>;
+export type CreateExpensePayload = Omit<Expense, 'id' | 'created_at' | 'updated_at' | 'supplier' | 'account_plan' | 'bank' | 'payment_method' | 'file_path'> & { file?: File | null };
+export type UpdateExpensePayload = Partial<CreateExpensePayload> & { file?: File | null };
+
+function buildFormData(payload: Record<string, any>, isUpdate: boolean = false): FormData {
+    const formData = new FormData();
+    if (isUpdate) {
+        formData.append('_method', 'POST');
+    }
+    for (const key in payload) {
+        if (payload[key] !== null && payload[key] !== undefined) {
+            formData.append(key, payload[key]);
+        }
+    }
+    return formData;
+}
 
 
 export async function getExpenses(startDate:string, endDate:string, company:string): Promise<Expense[]>{
@@ -46,7 +59,10 @@ export async function getExpenses(startDate:string, endDate:string, company:stri
 
 export async function createExpense(payload: CreateExpensePayload): Promise<Expense> {
     try {
-        const response = await api.post<Expense>('/api/expense/create', payload);
+        const data = buildFormData(payload);
+        const response = await api.post<Expense>('/api/expense/create', data, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
         return response.data;
     } catch (error) {
        throw handleApiError(error, 'Ocorreu um erro ao criar a despesa.');
@@ -64,7 +80,10 @@ export async function deleteExpense(id: number): Promise<void> {
 
 export async function updateExpense(id: number, payload: UpdateExpensePayload): Promise<Expense> {
     try {
-        const response = await api.post<Expense>(`/api/expense/update/${id}`, payload);
+        const data = buildFormData(payload, true);
+        const response = await api.post<Expense>(`/api/expense/update/${id}`, data, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
         return response.data;   
     } catch (error) {
        throw handleApiError(error, 'Ocorreu um erro ao atualizar a despesa.');
@@ -86,7 +105,3 @@ export async function uploadFile(file: File): Promise<{ url: string }> {
        throw handleApiError(error, 'Ocorreu um erro ao enviar o arquivo.');
     }
 }
-
-
-
-
