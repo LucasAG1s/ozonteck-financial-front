@@ -32,7 +32,7 @@ interface GenericFormProps<T extends z.ZodObject<any, any, any>> {
   onSubmit: (data: z.infer<T>) => void;
   isLoading: boolean;
   initialData?: Partial<z.infer<T>> | null;
-  fields: FormFieldConfig<T>[];
+  fields: FormFieldConfig<T>[] | ((watch: (name: Path<z.infer<T>>) => any) => FormFieldConfig<T>[]);
   schema: T;
   title: string;
   description: string;
@@ -74,6 +74,8 @@ export function GenericForm<T extends z.ZodObject<any, any, any>>({
     }
   }, [isOpen, initialData, reset, schema]);
 
+  const renderedFields = typeof fields === 'function' ? fields(watch) : fields;
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -83,7 +85,7 @@ export function GenericForm<T extends z.ZodObject<any, any, any>>({
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <FormFieldsRenderer
-            fields={fields}
+            fields={renderedFields}
             control={control}
             register={register}
             errors={errors}

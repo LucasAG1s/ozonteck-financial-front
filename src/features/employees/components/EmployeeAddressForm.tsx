@@ -21,7 +21,7 @@ const addressSchema = z.object({
   number: z.string().min(1, 'O número é obrigatório.'),
   zip_code: z.string().min(8, 'O CEP deve ter 8 dígitos.').max(9, 'O CEP deve ter no máximo 9 dígitos.'), // Assumindo formato 00000-000 ou 00000000
   city_id: z.coerce.number({ invalid_type_error: 'Cidade é obrigatória.' }).min(1, 'Cidade é obrigatória.'),
-  state_id: z.coerce.number({ invalid_type_error: 'Estado é obrigatório.' }).min(1, 'Estado é obrigatório.'),
+  state_id: z.coerce.number({ invalid_type_error: 'Estado é obrigatório.' }).min(1, 'O estado é obrigatório.'),
   country_id: z.coerce.number({ invalid_type_error: 'País é obrigatório.' }).min(1, 'País é obrigatório.'),
 });
 
@@ -50,7 +50,7 @@ export function EmployeeAddressForm({ address }: EmployeeAddressFormProps) {
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (data: AddressFormData) => updateEmployeeAddress(address.employee_id, data),
+    mutationFn: (data: AddressFormData) => updateEmployeeAddress(address.id, data),
     onSuccess: (updatedAddress) => { 
       toast.success('Endereço atualizado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['employee', String(address.employee_id)] });

@@ -3,17 +3,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { toast } from 'react-toastify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Employee, EmployeeContract, createContract, updateContract, CreateContractPayload, UpdateContractPayload } from '@/lib/services/hr/employees.service';
+import { Employee, EmployeeContract, createContract, updateContract, deleteContract, CreateContractPayload, UpdateContractPayload } from '@/lib/services/hr/employees.service';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
 import { getCompanies, Company } from '@/lib/services/finance/company.service';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog';
 import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm';
+import { getSectors, Sector } from '@/lib/services/hr/sectors.service';
 
 const contractSchema = z.object({
-  employee_id: z.number(),
   company_id: z.coerce.number().min(1, 'A empresa é obrigatória.'),
   contract_type: z.string().min(1, 'O tipo de contrato é obrigatório.'),
   admission_date: z.string().min(1, 'A data de admissão é obrigatória.'),
@@ -22,23 +23,21 @@ const contractSchema = z.object({
   sector_id: z.coerce.number().min(1, 'O setor é obrigatório.'),
   is_unionized: z.coerce.boolean(),
   work_schedule: z.string().optional().nullable(),
+  active: z.coerce.boolean().optional(),
 });
-
-// Tipos para os setores (placeholder)
-const sectors = [
-  { id: 1, name: 'Teste' },
-  { id: 2, name: 'Administrativo' },
-];
 
 interface EmployeeContractsListProps {
   employee: Employee;
 }
 
 export function EmployeeContractsList({ employee }: EmployeeContractsListProps) {
+
   const contracts = employee.contracts || [];
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [contractToEdit, setContractToEdit] = useState<EmployeeContract | null>(null);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<number | null>(null);
 
   const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[]>({
     queryKey: ['companies'],
@@ -67,12 +66,33 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
     onError: (error: Error) => toast.error(`Erro ao atualizar contrato: ${error.message}`),
   });
 
+  const { mutate: deleteContractMutation, isPending: isDeleting } = useMutation({
+    mutationFn: deleteContract,
+    onSuccess: () => {
+      toast.success("Contrato excluído com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['employee', String(employee.id)] });
+      setIsAlertOpen(false);
+      setContractToDelete(null);
+    },
+    onError: (error: Error) => toast.error(`Erro ao excluir contrato: ${error.message}`),
+  });
+
   const handleFormSubmit = (data: z.infer<typeof contractSchema>) => {
-    const payload = { ...data, is_unionized: data.is_unionized ? 1 : 0 };
     if (contractToEdit) {
-      updateContractMutation({ id: contractToEdit.id, payload });
+      const payload = { 
+        ...data, 
+        is_unionized: data.is_unionized ? 1 : 0,
+        active: data.active ? 1 : 0,
+      };
+      updateContractMutation({ id: contractToEdit.id, payload: payload as UpdateContractPayload });
     } else {
-      createContractMutation(payload as CreateContractPayload);
+      const payloadWithEmployeeId = { 
+        ...data, 
+        employee_id: employee.id, 
+        is_unionized: data.is_unionized ? 1 : 0,
+        active: data.active ? 1 : 0,
+      };
+      createContractMutation(payloadWithEmployeeId);
     }
   };
 
@@ -86,16 +106,42 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
     setIsModalOpen(true);
   };
 
-  const formFields: FormFieldConfig<typeof contractSchema>[] = [
-    { name: 'company_id', label: 'Empresa', type: 'select', options: companies.map(c => ({ value: c.id, label: c.corporate_name })), gridCols: 1 },
-    { name: 'contract_type', label: 'Tipo de Contrato', type: 'select', options: [{ value: 'CLT', label: 'CLT' }, { value: 'PJ', label: 'PJ' }, { value: 'Estágio', label: 'Estágio' }], gridCols: 1 },
-    { name: 'position', label: 'Cargo', type: 'text', placeholder: 'Ex: Desenvolvedor', gridCols: 1 },
-    { name: 'salary', label: 'Salário', type: 'number', placeholder: '0.00', step: '0.01', gridCols: 1 },
-    { name: 'admission_date', label: 'Data de Admissão', type: 'date', gridCols: 1 },
-    { name: 'sector_id', label: 'Setor', type: 'select', options: sectors.map(s => ({ value: s.id, label: s.name })), gridCols: 1 },
-    { name: 'work_schedule', label: 'Jornada de Trabalho (Opcional)', type: 'text', placeholder: 'Ex: 09:00 às 18:00', gridCols: 1 },
-    { name: 'is_unionized', label: 'Sindicalizado?', type: 'select', options: [{ value: 'true', label: 'Sim' }, { value: 'false', label: 'Não' }], gridCols: 1 },
-  ];
+  const handleDeleteClick = (id: number) => {
+    setContractToDelete(id);
+    setIsAlertOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (contractToDelete) {
+      deleteContractMutation(contractToDelete);
+    }
+  };
+
+  const formFields = (watch: Function): FormFieldConfig<typeof contractSchema>[] => {
+    const selectedCompanyId = watch('company_id');
+
+    const { data: sectors = [], isLoading: isLoadingSectors } = useQuery<Sector[]>({
+      queryKey: ['sectors', selectedCompanyId],
+      queryFn: () => getSectors(selectedCompanyId),
+      enabled: !!selectedCompanyId,
+      staleTime: 1000 * 60 * 5, 
+    });
+
+    const fields: FormFieldConfig<typeof contractSchema>[] = [
+      { name: 'company_id', label: 'Empresa', type: 'select', options: companies.map(c => ({ value: c.id, label: c.corporate_name })), gridCols: 1 },
+      { name: 'sector_id', label: 'Setor', type: 'select', options: sectors.map(s => ({ value: s.id, label: s.name })), gridCols: 1, disabled: !selectedCompanyId || isLoadingSectors, placeholder: isLoadingSectors ? 'Carregando...' : 'Selecione um setor' },
+      { name: 'contract_type', label: 'Tipo de Contrato', type: 'select', options: [{ value: 'CLT', label: 'CLT' }, { value: 'PJ', label: 'PJ' }, { value: 'Estágio', label: 'Estágio' }], gridCols: 1 },
+      { name: 'position', label: 'Cargo', type: 'text', placeholder: 'Ex: Desenvolvedor', gridCols: 1 },
+      { name: 'salary', label: 'Salário', type: 'number', placeholder: '0.00', step: '0.01', gridCols: 1 },
+      { name: 'admission_date', label: 'Data de Admissão', type: 'date', gridCols: 1 },
+      { name: 'work_schedule', label: 'Jornada de Trabalho (Opcional)', type: 'text', placeholder: 'Ex: 09:00 às 18:00', gridCols: 1 },
+      { name: 'is_unionized', label: 'Sindicalizado?', type: 'select', options: [{ value: 'true', label: 'Sim' }, { value: 'false', label: 'Não' }], gridCols: 1 },
+    ];
+
+    fields.push({ name: 'active', label: 'Status do Contrato', type: 'select', options: [{ value: 'true', label: 'Ativo' }, { value: 'false', label: 'Inativo' }], gridCols: 1 });
+
+    return fields;
+  };
 
   return (
     <>
@@ -152,6 +198,9 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
                             <Button variant="ghost" size="icon" onClick={() => handleEditClick(contract)}>
                               <Edit className="h-4 w-4" />
                             </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(contract.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -169,11 +218,20 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
         onOpenChange={(isOpen) => { if (!isOpen) setContractToEdit(null); setIsModalOpen(isOpen); }}
         onSubmit={handleFormSubmit}
         isLoading={isCreating || isUpdating}
-        initialData={contractToEdit ? { ...contractToEdit, is_unionized: !!contractToEdit.is_unionized } : { employee_id: employee.id }}
+        initialData={contractToEdit ? { ...contractToEdit, is_unionized: !!contractToEdit.is_unionized, active: !!contractToEdit.active } : { company_id: companies[0]?.id, active: true }}
         fields={formFields}
         schema={contractSchema}
         title={contractToEdit ? 'Editar Contrato' : 'Novo Contrato'}
         description="Preencha as informações do contrato do colaborador."
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={isAlertOpen}
+        onOpenChange={setIsAlertOpen}
+        onConfirm={confirmDelete}
+        isDeleting={isDeleting}
+        title="Excluir Contrato?"
+        description="Essa ação não pode ser desfeita. Isso irá excluir permanentemente o contrato do colaborador."
       />
     </>
   );

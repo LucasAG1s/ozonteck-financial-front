@@ -1,12 +1,12 @@
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input'; // Keep Input
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Input } from '@/components/ui/input'; 
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmployeeData, updateEmployeeData } from '@/lib/services/hr/employees.service';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -41,7 +41,7 @@ export function EmployeeAdditionalDataForm({ data }: EmployeeAdditionalDataFormP
     mutationFn: (formData: AdditionalDataFormData) => updateEmployeeData(data.employee_id, formData),
     onSuccess: () => {
       toast.success('Dados adicionais atualizados com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['employee', String(data.employee_id)] });
+      queryClient.invalidateQueries({ queryKey: ['employee', String(data.id)] });
       queryClient.invalidateQueries({ queryKey: ['employees'] });
     },
     onError: (error) => {

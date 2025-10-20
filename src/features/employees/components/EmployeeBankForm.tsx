@@ -43,7 +43,7 @@ export function EmployeeBankForm({ bank }: EmployeeBankFormProps) {
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (data: BankFormData) => updateEmployeeBank(bank.employee_id, data),
+    mutationFn: (data: BankFormData) => updateEmployeeBank(bank.id, data),
     onSuccess: (updatedBank) => {
       toast.success('Dados bancários atualizados com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['employee', String(bank.employee_id)] });
