@@ -1,27 +1,10 @@
 import api, { handleApiError } from "@/lib/axios";
-
-interface Transaction {
-  date: string;
-  description: string;
-  type: 'credit' | 'debit'
-  type_label: 'Entrada' | 'Saída'
-  amount: number
-  balance_previous:number
-  balance_later:number
-}
-
-export interface CashFlowData {
-  initial_balance: string;
-  final_balance: string;
-  total_entries: string;
-  total_expenses: string;
-  transactions: Transaction[];
-}
+import { ICashFlowData } from "@/interfaces/finance/CashFlowInterface";
 
 
-export async function getCashFlow( startDate: string, endDate: string, companyId: number,bankAccountId?: number | null): Promise<CashFlowData> {
+export async function getCashFlow( startDate: string, endDate: string, companyId: number,bankAccountId?: number | null): Promise<ICashFlowData> {
   try {
-    const response = await api.get<CashFlowData>('/api/cash-flow', {
+    const response = await api.get<ICashFlowData>('/api/cash-flow', {
         params: {
             start_date: startDate,
             end_date: endDate,

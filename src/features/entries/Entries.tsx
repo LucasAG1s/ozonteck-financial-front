@@ -10,7 +10,8 @@ import { Plus, Search, Filter, Edit, Trash2  } from 'lucide-react';''
 import { formatCurrency, formatDate, formatBankAccount } from '@/lib/utils';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { toast } from 'react-toastify';
-import { Entrie, getEntries, createEntry, updateEntry, UpdateEntryPayload, deleteEntry } from '@/lib/services/finance/entries.service';
+import { getEntries, createEntry, updateEntry, UpdateEntryPayload, deleteEntry } from '@/lib/services/finance/entries.service';
+import { IEntrie as Entrie } from '@/interfaces/finance/EntrieInterface';
 import { getAccountPlans } from '@/lib/services/finance/account-plan.service';
 import { getBanksAccount } from '@/lib/services/finance/banks.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -120,12 +121,11 @@ export function Entries() {
   };
 
   const handleEditClick = (entry: Entrie) => {
-    // Formata a data para o formato esperado pelo input 'datetime-local'
     const formattedEntry = {
       ...entry,
       entry_date: entry.entry_date ? format(new Date(entry.entry_date), "yyyy-MM-dd'T'HH:mm") : '',
     };
-    setEntryToEdit(formattedEntry as any); // 'as any' para contornar a diferença de tipo da data formatada
+    setEntryToEdit(formattedEntry as any); 
     setIsModalOpen(true);
   };
   

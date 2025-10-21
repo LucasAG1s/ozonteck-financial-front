@@ -12,16 +12,18 @@ import { Search, Plus, Edit, Trash2, Building, Filter } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm';
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog';
-import { Supplier, getSuppliers, createSupplier, deleteSupplier, CreateSupplierPayload } from '@/lib/services/finance/suppliers.service';
+import {getSuppliers, createSupplier, deleteSupplier, CreateSupplierPayload } from '@/lib/services/finance/suppliers.service'
+import { ISupplier as Supplier } from '@/interfaces/finance/SuppliersInterface';
 import { formatCNPJ } from '@/lib/utils';
 import { toast } from 'react-toastify';
 
 const supplierSchema = z.object({
-  name: z.string().min(3, 'O nome é obrigatório.'),
-  document: z.string().min(11, 'O documento (CPF/CNPJ) é obrigatório.'),
+  fantasy_name: z.string().min(3, 'O Nome Fantasia é obrigatório.'),
+  company_name: z.string().min(3, 'A Razão Social é obrigatória.'),
+  document: z.string().min(11, 'O CNPJ é obrigatório.'),
   email: z.string().email('O e-mail é inválido.'),
   phone: z.string().min(10, 'O telefone é obrigatório.'),
-  status: z.enum(['ativo', 'inativo']),
+  active: z.coerce.boolean().default(true),
 });
 
 export function Suppliers() {
@@ -60,14 +62,14 @@ export function Suppliers() {
   });
 
   const filteredSuppliers = useMemo(() => suppliers.filter(supplier => {
-    const matchesSearch = supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = supplier.fantasy_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          supplier.document.includes(searchTerm);
-    const matchesStatus = !statusFilter || supplier.status === statusFilter;
+    const matchesStatus = !statusFilter || (statusFilter === 'true' && supplier.active) || (statusFilter === 'false' && !supplier.active);
     return matchesSearch && matchesStatus;
   }), [suppliers, searchTerm, statusFilter]);
 
-  const activeSuppliersCount = suppliers.filter(f => f.status === 'ativo').length;
-  const inactiveSuppliersCount = suppliers.filter(f => f.status === 'inativo').length;
+  const activeSuppliersCount = suppliers.filter(f => f.active).length;
+  const inactiveSuppliersCount = suppliers.filter(f => !f.active).length;
 
   const handleFormSubmit = (data: z.infer<typeof supplierSchema>) => {
     createSupplierMutation(data as CreateSupplierPayload);
@@ -89,11 +91,12 @@ export function Suppliers() {
   };
 
   const formFields: FormFieldConfig<typeof supplierSchema>[] = [
-    { name: 'name', label: 'Nome / Razão Social', type: 'text', placeholder: 'Nome do fornecedor', gridCols: 2, disabled: false },
+    { name: 'fantasy_name', label: 'Nome Fantasia', type: 'text', placeholder: 'Nome Fantasia', gridCols: 2, disabled: false },
+    { name: 'company_name', label: 'Razão Social', type: 'text', placeholder: 'Razão Social', gridCols: 2, disabled: false},
     { name: 'document', label: 'CNPJ', type: 'text', placeholder: 'Documento', gridCols: 1, disabled: false },
     { name: 'email', label: 'E-mail', type: 'email', placeholder: 'contato@fornecedor.com', gridCols: 1, disabled: false },
     { name: 'phone', label: 'Telefone', type: 'text', placeholder: '(00) 00000-0000', gridCols: 1, disabled: false },
-    { name: 'status', label: 'Status', type: 'select', options: [{ value: 'ativo', label: 'Ativo' }, { value: 'inativo', label: 'Inativo' }], gridCols: 1, disabled: false },
+    { name: 'active', label: 'Status', type: 'select', options: [{ value: 'true', label: 'Ativo' }, { value: 'false', label: 'Inativo' }], gridCols: 1, disabled: false },
   ];
 
   return (
@@ -152,13 +155,13 @@ export function Suppliers() {
               </div>
             </div>
             <div>
-              <Label htmlFor="statusFilter">Status</Label>
+              <Label htmlFor="activeFilter">Status</Label>
               <Select onValueChange={(value) => setStatusFilter(value === "all" ? "" : value)} value={statusFilter || "all"}>
                 <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
+                  <SelectItem value="true">Ativo</SelectItem>
+                  <SelectItem value="false">Inativo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -188,17 +191,17 @@ export function Suppliers() {
               ))}
               {filteredSuppliers.map((supplier) => (
                 <TableRow key={supplier.id}>
-                  <TableCell className="font-medium">{supplier.name}</TableCell>
+                  <TableCell className="font-medium">{supplier.fantasy_name}</TableCell>
                   <TableCell>{formatCNPJ(supplier.document)}</TableCell>
                   <TableCell>{supplier.email}</TableCell>
                   <TableCell>{supplier.phone}</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs ${
-                      supplier.status === 'ativo' 
+                      supplier.active 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {supplier.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                      {supplier.active ? 'Ativo' : 'Inativo'}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">

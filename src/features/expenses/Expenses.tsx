@@ -11,12 +11,17 @@ import { Plus, Search, Filter, Edit, Trash2, Download } from 'lucide-react';
 import { formatCurrency, formatDate, formatBankAccount } from '@/lib/utils';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { toast } from 'react-toastify';
-import { Expense, getExpenses, createExpense, updateExpense, UpdateExpensePayload,CreateExpensePayload, deleteExpense } from '@/lib/services/finance/expenses.service';
+import { getExpenses, createExpense, updateExpense, UpdateExpensePayload,CreateExpensePayload, deleteExpense } from '@/lib/services/finance/expenses.service';
+import { IExpense as Expense } from '@/interfaces/finance/ExpenseInterface';
 import { getTemporaryFileUrl } from '@/lib/services/generic.service';
-import { getAccountPlans, AccountPlan } from '@/lib/services/finance/account-plan.service';
-import { getBanksAccount, BankAccount } from '@/lib/services/finance/banks.service';
-import { getSuppliers, Supplier } from '@/lib/services/finance/suppliers.service';
-import { PaymentMethod,getPaymentMethods } from '@/lib/services/finance/payment-methods.service';
+import { getAccountPlans } from '@/lib/services/finance/account-plan.service';
+import { IAccountPlan } from '@/interfaces/finance/AccountPlanInterface';
+import { getBanksAccount } from '@/lib/services/finance/banks.service';
+import {IBankAccount} from '@/interfaces/finance/BankAccountInterface';
+import { getSuppliers } from '@/lib/services/finance/suppliers.service';
+import { ISupplier } from '@/interfaces/finance/SuppliersInterface';
+import { getPaymentMethods } from '@/lib/services/finance/payment-methods.service';
+import { IPaymentMethod as PaymentMethod } from '@/interfaces/finance/PaymentMethodInterface';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCompanies } from '@/hooks/useCompanies';
@@ -76,23 +81,23 @@ export function Expenses() {
   });
 
   const { companies, loading: isLoadingCompanies } = useCompanies();
-  const { data: accountPlans = [], isLoading: isLoadingPlans } = useQuery<AccountPlan[]>({
+  const { data: accountPlans = [], isLoading: isLoadingPlans } = useQuery<IAccountPlan[]>({
     queryKey: ['accountPlans'],
     queryFn: getAccountPlans,
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
-  const { data: bankAccounts = [], isLoading: isLoadingBanks } = useQuery<BankAccount[]>({
+  const { data: bankAccounts = [], isLoading: isLoadingBanks } = useQuery<IBankAccount[]>({
     queryKey: ['bankAccounts', selectedCompany?.id],
     queryFn: () => getBanksAccount(selectedCompany!.id),
     enabled: !!selectedCompany?.id,
     staleTime: 1000 * 60 * 3,
     refetchOnWindowFocus: false,
   });
-  const { data: suppliers = [], isLoading: isLoadingSuppliers } = useQuery<Supplier[]>({
+  const { data: suppliers = [], isLoading: isLoadingSuppliers } = useQuery<ISupplier[]>({
      queryKey: ['suppliers'], 
      queryFn: getSuppliers,
-     staleTime: 1000 * 60 * 5, // 5 minutos
+     staleTime: 1000 * 60 * 5, 
      refetchOnWindowFocus: false,
      });
 
@@ -151,7 +156,6 @@ export function Expenses() {
 
     if (expenseToEdit) {
       const updatePayload: UpdateExpensePayload = payload;
-      // Se não houver um novo arquivo, não envie o campo 'file'
       if (!(payload.file instanceof File)) {
         delete updatePayload.file;
       }
@@ -170,7 +174,6 @@ export function Expenses() {
     const formattedExpense = {
       ...expense,
       expense_date: expense.expense_date ? format(new Date(expense.expense_date), "yyyy-MM-dd'T'HH:mm") : '',
-      // Passa a URL do arquivo existente para o campo 'file' do formulário
       file: expense.file_path,
     };
     setExpenseToEdit(formattedExpense as any);
@@ -191,7 +194,7 @@ export function Expenses() {
   const handleDownloadClick = (filePath: string) => {
     getFileUrlMutation({
       path: filePath,
-      disk: 's3', // O disco padrão, conforme sua solicitação
+      disk: 's3',
     });
   };
 
@@ -231,7 +234,7 @@ export function Expenses() {
       label: 'Fornecedor',
       type: 'select',
       placeholder: 'Selecione um fornecedor',
-      options: suppliers.map(s => ({ value: s.id, label: s.name })),
+      options: suppliers.map(s => ({ value: s.id, label: s.fantasy_name })),
       gridCols: 1,
     },
     {
@@ -297,7 +300,7 @@ export function Expenses() {
                 <SelectTrigger><SelectValue placeholder="Todos os fornecedores" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os fornecedores</SelectItem>
-                  {suppliers.map(s => (<SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>))}
+                  {suppliers.map(s => (<SelectItem key={s.id} value={String(s.id)}>{s.fantasy_name}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -359,7 +362,7 @@ export function Expenses() {
                 <TableRow key={expense.id}>
                   <TableCell>{formatDate(new Date(expense.expense_date))}</TableCell>
                   <TableCell className="font-medium">{expense.description}</TableCell>
-                  <TableCell>{expense.supplier?.name || 'N/A'}</TableCell>
+                  <TableCell>{expense.supplier?.fantasy_name || 'N/A'}</TableCell>
                   <TableCell>{expense.account_plan?.name || 'N/A'}</TableCell>
                   <TableCell className="text-center">{expense.bank?.bank_name + ' (' + formatBankAccount(expense?.bank?.account || '') + ')' || 'N/A'}</TableCell>
                   <TableCell className="text-center">{expense.payment_method?.name || 'N/A'}</TableCell>

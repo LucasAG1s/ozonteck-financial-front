@@ -24,6 +24,7 @@ import { DRE } from './features/dre/DRE'
 import { CashFlow } from './features/cashFlow/cashFlow' 
 import 'react-toastify/dist/ReactToastify.css'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { NotFoundPage } from './components/layout/NotFoundPage'
 
 const queryClient = new QueryClient()
 
@@ -42,7 +43,7 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route // Rota do Dashboard protegida explicitamente
+              <Route
                 index
                 element={
                   <ProtectedRoute requiredPermission="dashboard">
@@ -116,11 +117,9 @@ function App() {
                 <Route index element={<Employees />} />
                 <Route path="edit/:id" element={<EmployeeEditPage />} />
               </Route>
-              <Route
-                path="suppliers/*"
-                element={
+              <Route path="suppliers/*" element={
                   <ProtectedRoute requiredPermission="suppliers">
-                    <Suppliers />
+                    <Outlet />
                   </ProtectedRoute>
                 }
               >
@@ -152,9 +151,7 @@ function App() {
                 }
               />
             </Route> {/* Fim da rota PAI que contém o Layout */}
-            
-            {/* Você pode adicionar uma rota de "Não Encontrado" (404) aqui se desejar */}
-            {/* <Route path="*" element={<NotFoundPage />} /> */}
+            <Route path="*" element={<NotFoundPage />} />
             
           </Routes>
           <ToastContainer

@@ -16,7 +16,6 @@ import { EmployeePaymentsList } from './components/EmployeePaymentsList';
 export function EmployeeEditPage() {
   const { id } = useParams<{ id: string }>();
 
-  // Garante que a query só rode com um ID numérico válido.
   const { data: employee, isLoading } = useQuery({
     queryKey: ['employee', id],
     queryFn: () => getEmployeeById(Number(id!)),

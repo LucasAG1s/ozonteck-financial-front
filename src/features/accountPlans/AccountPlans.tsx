@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { AccountPlan, getAccountPlans, createAccountPlan, CreateAccountPlanPayload, deleteAccountPlan, updateAccountPlan, UpdateAccountPlanPayload } from "@/lib/services/finance/account-plan.service";
+import { getAccountPlans, createAccountPlan, CreateAccountPlanPayload, deleteAccountPlan, updateAccountPlan, UpdateAccountPlanPayload } from "@/lib/services/finance/account-plan.service";
+import { IAccountPlan } from "@/interfaces/finance/AccountPlanInterface";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +18,10 @@ const accountPlanSchema = z.object({
   description: z.string().optional(),
   parent_id: z.coerce.number().nullable(),
 });
-type AccountPlanNode = AccountPlan & { children: AccountPlanNode[] };
+type AccountPlanNode = IAccountPlan & { children: AccountPlanNode[] };
 
 
-function buildTree(items: AccountPlan[]): AccountPlanNode[] {
+function buildTree(items: IAccountPlan[]): AccountPlanNode[] {
   const tree: AccountPlanNode[] = [];
   const childrenOf: { [key: number]: AccountPlanNode[] } = {};
   const itemMap: { [key: number]: AccountPlanNode } = {};
@@ -53,7 +54,7 @@ interface AccountPlanRowProps {
   level: number;
   expanded: Set<number>;
   onToggle: (id: number) => void;
-  onEdit: (plan: AccountPlan) => void;
+  onEdit: (plan: IAccountPlan) => void;
   onDelete: (id: number) => void;
 }
 function AccountPlanRow({ plan, level, expanded, onToggle, onEdit, onDelete }: AccountPlanRowProps) {
@@ -99,10 +100,10 @@ export function AccountPlans() {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [planToEdit, setPlanToEdit] = useState<AccountPlan | null>(null);
+  const [planToEdit, setPlanToEdit] = useState<IAccountPlan | null>(null);
   const [planToDelete, setPlanToDelete] = useState<number | null>(null);
 
-  const { data: plans = [], isLoading, isError, error } = useQuery<AccountPlan[]>({
+  const { data: plans = [], isLoading, isError, error } = useQuery<IAccountPlan[]>({
     queryKey: ['accountPlans'],
     queryFn: getAccountPlans,
     staleTime: 1000 * 60 * 5, 
@@ -154,7 +155,7 @@ export function AccountPlans() {
     }
   };
 
-  const handleEditClick = (plan: AccountPlan) => {
+  const handleEditClick = (plan: IAccountPlan) => {
     setPlanToEdit(plan);
     setIsModalOpen(true);
   };
@@ -209,9 +210,6 @@ export function AccountPlans() {
       label: 'Plano Pai (Opcional)',
       type: 'select',
       placeholder: 'Nenhum (Plano Raiz)',
-      // ATENÇÃO: O GenericForm atual não suporta filtragem dinâmica de opções
-      // baseada em outros campos do formulário (ex: tipo).
-      // Todas as opções de planos de conta serão exibidas aqui.
       options: [{ value: 'null', label: 'Nenhum (Plano Raiz)' }, ...plans.map(plan => ({
         value: plan.id,
         label: `${plan.name} (${plan.type === 1 ? 'Receita' : 'Despesa'})`

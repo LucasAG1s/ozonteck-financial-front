@@ -1,30 +1,8 @@
 import api, { handleApiError } from "@/lib/axios";
-import { BankAccount } from "./banks.service";
-import { Supplier } from "./suppliers.service";
-import { AccountPlan } from "./account-plan.service";
-import { PaymentMethod } from "./payment-methods.service";
-
-export interface Expense {
-    id:number
-    company_id:number
-    supplier_id:number
-    bank_account_id:number
-    account_plan_id:number
-    payment_method_id:number
-    amount:string
-    expense_date:string
-    description:string
-    file_path:string 
-    created_at:string
-    updated_at:string
-    supplier: Supplier | null
-    account_plan: AccountPlan | null
-    payment_method: PaymentMethod | null
-    bank: BankAccount | null
-}
+import { IExpense } from "@/interfaces/finance/ExpenseInterface";
 
 
-export type CreateExpensePayload = Omit<Expense, 'id' | 'created_at' | 'updated_at' | 'supplier' | 'account_plan' | 'bank' | 'payment_method' | 'file_path'> & { file?: File | null };
+export type CreateExpensePayload = Omit<IExpense, 'id' | 'created_at' | 'updated_at' | 'supplier' | 'account_plan' | 'bank' | 'payment_method' | 'file_path'> & { file?: File | null };
 export type UpdateExpensePayload = Partial<CreateExpensePayload> & { file?: File | null };
 
 function buildFormData(payload: Record<string, any>, isUpdate: boolean = false): FormData {
@@ -41,9 +19,9 @@ function buildFormData(payload: Record<string, any>, isUpdate: boolean = false):
 }
 
 
-export async function getExpenses(startDate:string, endDate:string, company:string): Promise<Expense[]>{
+export async function getExpenses(startDate:string, endDate:string, company:string): Promise<IExpense[]>{
     try{
-        const response = await api.get<Expense[]>('/api/expense',{
+        const response = await api.get<IExpense[]>('/api/expense',{
             params:{
                 start_date:startDate,
                 end_date:endDate,
@@ -57,10 +35,10 @@ export async function getExpenses(startDate:string, endDate:string, company:stri
     }
 }
 
-export async function createExpense(payload: CreateExpensePayload): Promise<Expense> {
+export async function createExpense(payload: CreateExpensePayload): Promise<IExpense> {
     try {
         const data = buildFormData(payload);
-        const response = await api.post<Expense>('/api/expense/create', data, {
+        const response = await api.post<IExpense>('/api/expense/create', data, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
         return response.data;
@@ -78,10 +56,10 @@ export async function deleteExpense(id: number): Promise<void> {
 }
 
 
-export async function updateExpense(id: number, payload: UpdateExpensePayload): Promise<Expense> {
+export async function updateExpense(id: number, payload: UpdateExpensePayload): Promise<IExpense> {
     try {
         const data = buildFormData(payload, true);
-        const response = await api.post<Expense>(`/api/expense/update/${id}`, data, {
+        const response = await api.post<IExpense>(`/api/expense/update/${id}`, data, {
             headers: { 'Content-Type': 'multipart/form-data' },
         });
         return response.data;   

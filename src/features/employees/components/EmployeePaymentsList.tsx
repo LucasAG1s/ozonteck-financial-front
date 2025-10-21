@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Employee } from '@/lib/services/hr/employees.service'; // Added EmployeePayments
+import { IEmployee as Employee } from '@/interfaces/HR/EmployeeInterface';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';

@@ -24,6 +24,8 @@ export async function getAddressByCEP(cep: string): Promise<ViaCEPResponse> {
     if (response.data.erro) {
       throw new Error('CEP não encontrado.');
     }
+
+    console.log(response.data)
     return response.data;
   } catch (error) {
     // Re-throw a more specific error message

@@ -1,14 +1,10 @@
 import api, { handleApiError } from '@/lib/axios';
-
-export interface DashboardData {
-  cardsData: any;
-  chartsData: any;  
-}
+import { IDashboardData } from '@/interfaces/finance/DashboardInterface';
 
 
-export async function getDashboardData(startDate: string, endDate: string, company: string): Promise<DashboardData> {
+export async function getDashboardData(startDate: string, endDate: string, company: string): Promise<IDashboardData> {
     try {
-      const response = await api.get<DashboardData>('/api/dashboard', {
+      const response = await api.get<IDashboardData>('/api/dashboard', {
         params: {
           start_date: startDate,
           end_date: endDate,

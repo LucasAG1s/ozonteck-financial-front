@@ -1,38 +1,23 @@
 import api, {handleApiError} from "@/lib/axios";
+import { ICompany } from "@/interfaces/universal/CompanyInterface";
 
 
-export interface Company {
-  id: number;
-  corporate_name: string;
-  cnpj: string;
-  phone_number: string | null;
-  trade_name: string | null;
-  type: string;
-  address_line: string | null;
-  city: string | null;
-  complement: string | null;
-  state: string | null;
-  zipcode: string | null;
-  country: string | null;
-  email: string | null;
-}
 
-
-export type NewCompanyPayload = Omit<Company, 'id'>;
+export type NewCompanyPayload = Omit<ICompany, 'id'>;
 export type UpdateCompanyPayload = Partial<NewCompanyPayload>;
 
 
-export async function getCompanies(): Promise<Company[]> {
-  const response = await api.get<Company[]>('/api/companies');
+export async function getCompanies(): Promise<ICompany[]> {
+  const response = await api.get<ICompany[]>('/api/companies');
   return response.data;
 }
 
 /**
  * @param companyData
  */
-export async function createCompany(companyData: NewCompanyPayload): Promise<Company> {
+export async function createCompany(companyData: NewCompanyPayload): Promise<ICompany> {
   try{
-    const response = await api.post<Company>('/api/companies/create', companyData)
+    const response = await api.post<ICompany>('/api/companies/create', companyData)
     return response.data
   }catch(error){
     throw handleApiError(error, 'Ocorreu um erro ao criar a empresa.');
@@ -43,9 +28,9 @@ export async function createCompany(companyData: NewCompanyPayload): Promise<Com
  * @param id
  * @param payload 
  */
-export async function updateCompany({ id, payload }: { id: number; payload: UpdateCompanyPayload }): Promise<Company> {
+export async function updateCompany({ id, payload }: { id: number; payload: UpdateCompanyPayload }): Promise<ICompany> {
   try {
-    const response = await api.patch<Company>(`/api/companies/${id}`, payload)
+    const response = await api.patch<ICompany>(`/api/companies/${id}`, payload)
     return response.data
 
   } catch(error){

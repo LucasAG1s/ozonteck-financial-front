@@ -1,4 +1,5 @@
 import api, { handleApiError } from "@/lib/axios";
+import { IEmployee, IEmployeeAddress, IEmployeeBank, IEmployeeContract, IEmployeeData} from "@/interfaces/HR/EmployeeInterface";
 
 function buildFormData(payload: Record<string, any>, isUpdate: boolean = false): FormData {
     const formData = new FormData();
@@ -13,86 +14,14 @@ function buildFormData(payload: Record<string, any>, isUpdate: boolean = false):
     return formData;
 }
 
-export interface EmployeeData {
-  id: number;
-  employee_id: number;
-  document_number: string;
-  birth_date: string;
-  marital_status: string;
-  gender: string;
-  avatar?: string;
-}
 
-export interface EmployeeAddress {
-  id: number;
-  employee_id: number;
-  address_line: string;
-  complement: string | null;
-  neighborhood: string;
-  number: string;
-  zip_code: string;
-  city_id: number;
-  state_id: number;
-  country_id: number;
-}
-
-export interface EmployeeBank {
-  id: number;
-  employee_id: number;
-  bank_id: number;
-  agency_number: number;
-  account_number: number;
-  account_type: string;
-  pix_key: string;
-}
-
-export interface EmployeePayments{
-  id:number
-  employee_id:number
-  company_id:number
-	type:String
-  amount:string	
-  reference_month: string; 
-  paid_at: string; 
-  }
-
-export interface EmployeeContract {
-  id: number;
-  employee_id: number;
-  company_id: number;
-  contract_type: string;
-  admission_date: string;
-  salary: string;
-  position: string | null;
-  active: number;
-  sector_id: number;
-  is_unionized: number; 
-  work_schedule: string | null; 
-  sector: { id: number; name: string; }; 
-}
-
-export interface Employee {
-  id: number;
-  name: string;
-  phone: string;
-  email: string;
-  contracts: EmployeeContract[];
-  data: EmployeeData;
-  address: EmployeeAddress;
-  bank: EmployeeBank; 
-  payments: EmployeePayments[]; 
-  active: boolean; 
-  created_at: string;
-  updated_at: string;
-}
-
-export type CreateEmployeePayload = Omit<Employee, 'id' | 'created_at' | 'updated_at'|'contracts'|'data'|'address'|'bank' | 'payments'> & { document_number?: string; avatar?: File | null };
+export type CreateEmployeePayload = Omit<IEmployee, 'id' | 'created_at' | 'updated_at'|'contracts'|'data'|'address'|'bank' | 'payments'> & { document_number?: string; avatar?: File | null };
 export type UpdateEmployeePayload = Partial<CreateEmployeePayload>;
 
 
-export async function getEmployees(companyId: number): Promise<Employee[]> {
+export async function getEmployees(companyId: number): Promise<IEmployee[]> {
   try {
-    const response = await api.get<Employee[]>('/api/employee', {
+    const response = await api.get<IEmployee[]>('/api/employee', {
       params: {
         company_id: companyId
       }
@@ -106,12 +35,12 @@ export async function getEmployees(companyId: number): Promise<Employee[]> {
 }
 
 
-export async function createEmployee(payload: CreateEmployeePayload): Promise<Employee> {
+export async function createEmployee(payload: CreateEmployeePayload): Promise<IEmployee> {
   try {
     const data = buildFormData(payload);
 
     console.log(data);
-    const response = await api.post<Employee>('/api/employee/create', data, {
+    const response = await api.post<IEmployee>('/api/employee/create', data, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
         console.log(response.data)
@@ -122,9 +51,9 @@ export async function createEmployee(payload: CreateEmployeePayload): Promise<Em
 }
 
 
-export async function updateEmployee(id: number, payload: UpdateEmployeePayload): Promise<Employee> {
+export async function updateEmployee(id: number, payload: UpdateEmployeePayload): Promise<IEmployee> {
   try {
-    const response = await api.post<Employee>(`/api/employee/update/${id}`, payload);
+    const response = await api.post<IEmployee>(`/api/employee/update/${id}`, payload);
 
     return response.data;
   } catch (error) {
@@ -132,20 +61,20 @@ export async function updateEmployee(id: number, payload: UpdateEmployeePayload)
   }
 }
 
-export type UpdateEmployeeGeneralPayload = Partial<Pick<Employee, 'name' | 'email' | 'phone'>>;
-export async function updateEmployeeGeneral(id: number, payload: UpdateEmployeeGeneralPayload): Promise<Employee> {
+export type UpdateEmployeeGeneralPayload = Partial<Pick<IEmployee, 'name' | 'email' | 'phone'>>;
+export async function updateEmployeeGeneral(id: number, payload: UpdateEmployeeGeneralPayload): Promise<IEmployee> {
   try {
-    const response = await api.post<Employee>(`/api/employee/update/${id}`, payload);
+    const response = await api.post<IEmployee>(`/api/employee/update/${id}`, payload);
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao atualizar os dados gerais do colaborador.');
   }
 }
 
-export type UpdateEmployeeDataPayload = Partial<Omit<EmployeeData, 'id' | 'employee_id' | 'avatar'>>;
-export async function updateEmployeeData(id: number, payload: UpdateEmployeeDataPayload): Promise<EmployeeData> {
+export type UpdateEmployeeDataPayload = Partial<Omit<IEmployeeData, 'id' | 'employee_id' | 'avatar'>>;
+export async function updateEmployeeData(id: number, payload: UpdateEmployeeDataPayload): Promise<IEmployeeData> {
   try {
-    const response = await api.post<EmployeeData>(`/api/employee/update-data/${id}`, payload);
+    const response = await api.post<IEmployeeData>(`/api/employee/update-data/${id}`, payload);
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao atualizar os dados adicionais do colaborador.');
@@ -153,42 +82,42 @@ export async function updateEmployeeData(id: number, payload: UpdateEmployeeData
 }
 
 
-export type UpdateEmployeeAddressPayload = Partial<Omit<EmployeeAddress, 'id' | 'employee_id'>>;
-export async function updateEmployeeAddress(id: number, payload: UpdateEmployeeAddressPayload): Promise<EmployeeAddress> {
+export type UpdateEmployeeAddressPayload = Partial<Omit<IEmployeeAddress, 'id' | 'employee_id'>>;
+export async function updateEmployeeAddress(id: number, payload: UpdateEmployeeAddressPayload): Promise<IEmployeeAddress> {
   try {
-    const response = await api.post<EmployeeAddress>(`/api/employee/update-address/${id}`, payload);
+    const response = await api.post<IEmployeeAddress>(`/api/employee/update-address/${id}`, payload);
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao atualizar o endereço do colaborador.');
   }
 }
 
-export type UpdateEmployeeBankPayload = Partial<Omit<EmployeeBank, 'id' | 'employee_id'>>;
-export async function updateEmployeeBank(id: number, payload: UpdateEmployeeBankPayload): Promise<EmployeeBank> {
+export type UpdateEmployeeBankPayload = Partial<Omit<IEmployeeBank, 'id' | 'employee_id'>>;
+export async function updateEmployeeBank(id: number, payload: UpdateEmployeeBankPayload): Promise<IEmployeeBank> {
   try {
-    const response = await api.post<EmployeeBank>(`/api/employee/update-bank/${id}`, payload);
+    const response = await api.post<IEmployeeBank>(`/api/employee/update-bank/${id}`, payload);
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao atualizar os dados bancários do colaborador.');
   }
 }
 
-export type CreateContractPayload = Omit<EmployeeContract, 'id' | 'sector'>;
+export type CreateContractPayload = Omit<IEmployeeContract, 'id' | 'sector'>;
 
-export async function createContract(payload: CreateContractPayload): Promise<EmployeeContract> {
+export async function createContract(payload: CreateContractPayload): Promise<IEmployeeContract> {
   try {
-    const response = await api.post<EmployeeContract>('/api/employee/contract/create', payload);
+    const response = await api.post<IEmployeeContract>('/api/employee/contract/create', payload);
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao criar o contrato.');
   }
 }
 
-export type UpdateContractPayload = Partial<Omit<EmployeeContract, 'id' | 'employee_id' | 'sector'>>;
+export type UpdateContractPayload = Partial<Omit<IEmployeeContract, 'id' | 'employee_id' | 'sector'>>;
 
-export async function updateContract(contractId: number, payload: UpdateContractPayload): Promise<EmployeeContract> {
+export async function updateContract(contractId: number, payload: UpdateContractPayload): Promise<IEmployeeContract> {
   try {
-    const response = await api.post<EmployeeContract>(`/api/employee/contract/update/${contractId}`, payload);
+    const response = await api.post<IEmployeeContract>(`/api/employee/contract/update/${contractId}`, payload);
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao atualizar o contrato.');
@@ -212,9 +141,9 @@ export async function deleteEmployee(id: number): Promise<void> {
   }
 }
 
-export async function getEmployeeById(id: number): Promise<Employee> {
+export async function getEmployeeById(id: number): Promise<IEmployee> {
   try {
-    const response = await api.get<Employee>(`/api/employee/edit/${id}`);
+    const response = await api.get<IEmployee>(`/api/employee/edit/${id}`);
     console.log(response.data);
     return response.data;
   }catch(error){

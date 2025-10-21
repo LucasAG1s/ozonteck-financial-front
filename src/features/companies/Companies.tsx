@@ -18,7 +18,8 @@ import { Label } from '@/components/ui/label'
 import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 import { formatCNPJ } from '@/lib/utils'
 import { toast } from 'react-toastify'
-import { Company, getCompanies, createCompany, updateCompany, deleteCompany } from '@/lib/services/finance/company.service'
+import { getCompanies, createCompany, updateCompany, deleteCompany } from '@/lib/services/finance/company.service'
+import { ICompany as Company} from '@/interfaces/universal/CompanyInterface'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Skeleton } from "@/components/ui/skeleton"
 

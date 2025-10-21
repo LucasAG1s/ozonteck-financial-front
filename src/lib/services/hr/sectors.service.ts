@@ -1,19 +1,11 @@
 import api, {handleApiError} from "@/lib/axios";
-
-
-export interface Sector{
-    id:number
-    company_id:number
-    name:string
-    created_at:string
-    updated_at:string
-}
+import { ISector } from "@/interfaces/HR/SectorInterface";
 
 
 
-export async function getSectors(companyId:number): Promise<Sector[]> {
+export async function getSectors(companyId:number): Promise<ISector[]> {
     try {
-        const response = await api.get<Sector[]>('/api/sector', {
+        const response = await api.get<ISector[]>('/api/sector', {
             params: {
                 company_id: companyId
             }

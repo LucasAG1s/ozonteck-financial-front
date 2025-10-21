@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Employee, updateEmployeeGeneral } from '@/lib/services/hr/employees.service';
+import { updateEmployeeGeneral } from '@/lib/services/hr/employees.service';
+import { IEmployee as Employee } from '@/interfaces/HR/EmployeeInterface';
 
 const generalSchema = z.object({
   name: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres.'),

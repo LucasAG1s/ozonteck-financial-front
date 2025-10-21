@@ -1,24 +1,16 @@
 import api, { handleApiError } from "@/lib/axios"
+import { IAccountPlan } from "@/interfaces/finance/AccountPlanInterface";
 
-export interface AccountPlan {
-  id: number;
-  name: string;
-  parent_id: number | null;
-  type: number;
-  description:string;
-  created_at: string;
-  updated_at: string;
-  
-}
 
-export type CreateAccountPlanPayload = Omit<AccountPlan, 'id' | 'created_at' | 'updated_at'>;
+
+export type CreateAccountPlanPayload = Omit<IAccountPlan, 'id' | 'created_at' | 'updated_at'>;
 export type UpdateAccountPlanPayload = Partial<CreateAccountPlanPayload>;
 
 
 
-export async function getAccountPlans(): Promise<AccountPlan[]> {
+export async function getAccountPlans(): Promise<IAccountPlan[]> {
   try {
-    const response = await api.get<AccountPlan[]>('/api/account-plan');
+    const response = await api.get<IAccountPlan[]>('/api/account-plan');
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao buscar os planos de contas.');
@@ -26,18 +18,18 @@ export async function getAccountPlans(): Promise<AccountPlan[]> {
 }
 
 
-export async function createAccountPlan(payload: CreateAccountPlanPayload): Promise<AccountPlan> {
+export async function createAccountPlan(payload: CreateAccountPlanPayload): Promise<IAccountPlan> {
   try {
-    const response = await api.post<AccountPlan>('/api/account-plan/create', payload);
+    const response = await api.post<IAccountPlan>('/api/account-plan/create', payload);
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao criar o plano de contas.');
   }
 }
 
-export async function updateAccountPlan(id: number, payload: UpdateAccountPlanPayload): Promise<AccountPlan> {
+export async function updateAccountPlan(id: number, payload: UpdateAccountPlanPayload): Promise<IAccountPlan> {
     try {
-      const response = await api.post<AccountPlan>(`/api/account-plan/update/${id}`, payload);
+      const response = await api.post<IAccountPlan>(`/api/account-plan/update/${id}`, payload);
       return response.data;
     } catch (error) {
       throw handleApiError(error, 'Ocorreu um erro ao atualizar o plano de contas.');

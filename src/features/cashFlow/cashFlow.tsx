@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { useCompanies } from '@/hooks/useCompanies';
-import { getCashFlow, CashFlowData } from '@/lib/services/finance/cash-flow.service';
+import { getCashFlow } from '@/lib/services/finance/cash-flow.service';
+import { ICashFlowData } from '@/interfaces/finance/CashFlowInterface';
 import { getBanksAccount } from '@/lib/services/finance/banks.service';
 import { DateRangeFilter } from '@/components/ui/dateRangeFilter';
 import { formatCurrency, formatDate, formatBankAccount } from '@/lib/utils';
@@ -31,7 +32,7 @@ export function CashFlow() {
     }
   }, [bankAccounts]);
 
-  const { data, isLoading, isError, error } = useQuery<CashFlowData>({
+  const { data, isLoading, isError, error } = useQuery<ICashFlowData>({
     queryKey: ['cashFlow', selectedCompany?.id, startDate, endDate, bankAccountId],
     queryFn: () => getCashFlow(startDate, endDate, selectedCompany!.id, bankAccountId),
     enabled: !!selectedCompany?.id && !!bankAccountId, 

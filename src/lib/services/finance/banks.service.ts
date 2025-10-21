@@ -1,27 +1,16 @@
 import api,{handleApiError} from "@/lib/axios";
+import { IBankAccount } from "@/interfaces/finance/BankAccountInterface";
 
 
-
-
-
-export interface BankAccount{
-    id:number
-    company_id:number
-    bank_name:string
-    account:number
-    agency:number
-    account_type:string
-}
-
-export type CreateBankAccountPaylod = Omit<BankAccount, 'id' | 'created_at' | 'updated_at'>
+export type CreateBankAccountPaylod = Omit<IBankAccount, 'id' | 'created_at' | 'updated_at'>
 export type UpdateBankAccountPayload = Partial<CreateBankAccountPaylod>;
-export type UpdateBankAccountResponse = BankAccount;
+export type UpdateBankAccountResponse = IBankAccount;
 
 
-export async function getBanksAccount(company:number): Promise<BankAccount[]>
+export async function getBanksAccount(company:number): Promise<IBankAccount[]>
 {
     try{
-        const response = await api.get<BankAccount[]>(`/api/bank-account/`,{
+        const response = await api.get<IBankAccount[]>(`/api/bank-account/`,{
             params:{
                 company_id:company
             }
@@ -36,9 +25,9 @@ export async function getBanksAccount(company:number): Promise<BankAccount[]>
  * @param payload
  */
 
-export async function createBankAccount(company:number, payload: CreateBankAccountPaylod): Promise<BankAccount>{
+export async function createBankAccount(company:number, payload: CreateBankAccountPaylod): Promise<IBankAccount>{
     try{
-        const response = await api.post<BankAccount>(`/api/bank-account/create/`,{
+        const response = await api.post<IBankAccount>(`/api/bank-account/create/`,{
             company,
             ...payload
         });
@@ -52,7 +41,7 @@ export async function createBankAccount(company:number, payload: CreateBankAccou
  * @param id 
  * @param payload 
  */
-export async function updateBankAccount(id:number, payload: UpdateBankAccountPayload): Promise<BankAccount>{
+export async function updateBankAccount(id:number, payload: UpdateBankAccountPayload): Promise<IBankAccount>{
     try{
         const response = await api.post<UpdateBankAccountResponse>(`/api/bank-account/update/${id}`, payload);
         return response.data;

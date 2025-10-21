@@ -3,16 +3,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { toast } from 'react-toastify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Employee, EmployeeContract, createContract, updateContract, deleteContract, CreateContractPayload, UpdateContractPayload } from '@/lib/services/hr/employees.service';
+import { createContract, updateContract, deleteContract, UpdateContractPayload } from '@/lib/services/hr/employees.service';
+import { IEmployee as Employee, IEmployeeContract as EmployeeContract} from '@/interfaces/HR/EmployeeInterface';
 import { Button } from '@/components/ui/button';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
-import { getCompanies, Company } from '@/lib/services/finance/company.service';
+import { getCompanies } from '@/lib/services/finance/company.service';
+import { ICompany as Company } from '@/interfaces/universal/CompanyInterface';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog';
 import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm';
-import { getSectors, Sector } from '@/lib/services/hr/sectors.service';
+import {ISector as Sector} from '@/interfaces/HR/SectorInterface';
+import { getSectors } from '@/lib/services/hr/sectors.service';
 
 const contractSchema = z.object({
   company_id: z.coerce.number().min(1, 'A empresa é obrigatória.'),

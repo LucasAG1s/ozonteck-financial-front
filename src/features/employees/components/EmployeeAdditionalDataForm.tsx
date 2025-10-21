@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input'; 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { EmployeeData, updateEmployeeData } from '@/lib/services/hr/employees.service';
+import { updateEmployeeData } from '@/lib/services/hr/employees.service';
+import { IEmployeeData as EmployeeData } from '@/interfaces/HR/EmployeeInterface';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const additionalDataSchema = z.object({

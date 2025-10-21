@@ -8,14 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Employee, updateEmployeeBank, EmployeeBank as EmployeeBankType } from '@/lib/services/hr/employees.service';
+import { updateEmployeeBank } from '@/lib/services/hr/employees.service';
+import { IEmployee as Employee, IEmployeeBank as EmployeeBankType} from '@/interfaces/HR/EmployeeInterface';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useBanks } from '@/lib/services/universal/banks.service';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const bankSchema = z.object({
   bank_id: z.coerce.number({ invalid_type_error: 'Banco é obrigatório.' }).min(1, 'Banco é obrigatório.'), 
-  agency_number: z.coerce.number({ invalid_type_error: 'Número da agência é obrigatório.' }).min(1, 'Número da agência é obrigatório.'),
+  agency: z.coerce.number({ invalid_type_error: 'Número da agência é obrigatório.' }).min(1, 'Número da agência é obrigatório.'),
   account_number: z.coerce.number({ invalid_type_error: 'Número da conta é obrigatório.' }).min(1, 'Número da conta é obrigatório.'),
   account_type: z.string().min(1, 'Tipo de conta é obrigatório.'),
   pix_key: z.string().min(5, 'Chave PIX deve ter pelo menos 5 caracteres.'),
@@ -35,7 +36,7 @@ export function EmployeeBankForm({ bank }: EmployeeBankFormProps) {
     resolver: zodResolver(bankSchema),
     defaultValues: {
       bank_id: bank?.bank_id || undefined,
-      agency_number: bank?.agency_number || undefined,
+      agency: bank?.agency_number || undefined,
       account_number: bank?.account_number || undefined,
       account_type: bank?.account_type || '',
       pix_key: bank?.pix_key || '',
