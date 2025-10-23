@@ -105,7 +105,7 @@ export function AccountPlans() {
 
   const { data: plans = [], isLoading, isError, error } = useQuery<IAccountPlan[]>({
     queryKey: ['accountPlans'],
-    queryFn: getAccountPlans,
+    queryFn: () => getAccountPlans(),
     staleTime: 1000 * 60 * 5, 
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

@@ -1,7 +1,8 @@
 // src/components/ui/DateRangeFilter.tsx
 import { useState, useEffect } from "react";
+import type { DateRange } from "react-day-picker";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Calendar, DateRange } from "@/components/ui/calendar";
+import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isValid } from "date-fns";
 import { Calendar as CalendarIcon, X, Filter } from "lucide-react";
@@ -18,8 +19,7 @@ export function DateRangeFilter({
   startDate: initialStart,
   endDate: initialEnd,
   onFilter,
-  label = "Selecione o período",
-  width = "w-48",
+  width = "w-50",
 }: DateRangeFilterProps) {
   const parseDate = (date?: Date | string) => {
     if (!date) return undefined;
@@ -39,8 +39,8 @@ export function DateRangeFilter({
     setRange({ from: parseDate(initialStart), to: parseDate(initialEnd) });
   }, [initialStart, initialEnd]);
 
-  const handleSelect = (selectedRange: DateRange) => {
-    setRange(selectedRange);
+  const handleSelect = (selectedRange: DateRange | undefined) => {
+    setRange(selectedRange ?? { from: undefined, to: undefined });
   };
 
   const handleClear = () => {
@@ -59,14 +59,11 @@ export function DateRangeFilter({
 
   return (
     <div className="flex flex-col space-y-1">
-      {label && <span className="text-sm text-muted-foreground">{label}</span>}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className={`${width} justify-between`}>
-            <div className=" flex justify-between">
-              {formatSafe(range.from) || "Início"} - {formatSafe(range.to) || "Fim"}
-              <CalendarIcon className="ml-1 mt-1 h-4 w-4" />
-            </div>
+          <Button variant="outline" className={`${width} justify-start text-left font-normal`}>
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            <span>{formatSafe(range.from) || "Início"} - {formatSafe(range.to) || "Fim"}</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2 flex flex-col gap-2">

@@ -1,6 +1,7 @@
 // src/contexts/CompaniesContext.tsx
 import { createContext, useEffect, useState } from "react"
-import { getCompanies, Company } from "@/lib/services/finance/company.service"
+import { getCompanies} from "@/lib/services/finance/company.service"
+import { ICompany as Company } from "@/interfaces/universal/CompanyInterface"
 
 interface CompaniesContextType {
   companies: Company[]

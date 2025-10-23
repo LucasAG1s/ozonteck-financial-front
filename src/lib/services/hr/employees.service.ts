@@ -1,5 +1,15 @@
 import api, { handleApiError } from "@/lib/axios";
-import { IEmployee, IEmployeeAddress, IEmployeeBank, IEmployeeContract, IEmployeeData} from "@/interfaces/HR/EmployeeInterface";
+import { 
+  IEmployee,
+  IEmployeeAddress,
+  IEmployeeBank,
+  IEmployeeContract,
+  IEmployeeData,
+  IEmployeePayment,
+  IEmployeePaymentSummary,
+  ISettleAllPaymentsPayload,
+  ISettlePaymentPayload
+} from "@/interfaces/HR/EmployeeInterface";
 
 function buildFormData(payload: Record<string, any>, isUpdate: boolean = false): FormData {
     const formData = new FormData();
@@ -114,7 +124,6 @@ export async function createContract(payload: CreateContractPayload): Promise<IE
 }
 
 export type UpdateContractPayload = Partial<Omit<IEmployeeContract, 'id' | 'employee_id' | 'sector'>>;
-
 export async function updateContract(contractId: number, payload: UpdateContractPayload): Promise<IEmployeeContract> {
   try {
     const response = await api.post<IEmployeeContract>(`/api/employee/contract/update/${contractId}`, payload);
@@ -132,7 +141,6 @@ export async function deleteContract(contractId: number): Promise<void> {
   }
 }
 
-
 export async function deleteEmployee(id: number): Promise<void> {
   try {
     await api.delete(`/api/employees/delete/${id}`);
@@ -149,4 +157,47 @@ export async function getEmployeeById(id: number): Promise<IEmployee> {
   }catch(error){
     throw handleApiError(error, 'Ocorreu um erro ao buscar o colaborador.');
   } 
+}
+
+export type CreateEmployeePaymentPayload = Omit<IEmployeePayment, 'id'>;
+export async function createEmployeePayment(payload: CreateEmployeePaymentPayload): Promise<IEmployeePayment> {
+  try {
+    const response = await api.post<IEmployeePayment>('/api/employee/payment/create', payload);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, 'Ocorreu um erro ao registrar o pagamento do colaborador.');
+  }
+}
+
+
+export async function getPaymentsData(companyId:number, reference_month:string): Promise<IEmployeePaymentSummary[]>{
+  try{
+    const response = await api.get(`/api/employee-payment/${companyId}`,{
+      params:{
+        reference_month
+      }
+    })
+    console.log(response.data)
+    return response.data
+  }catch(error){
+    throw handleApiError(error, 'Ocorreu um erro ao buscar os dados de pagamento.');
+  }
+}
+
+
+export async function settleEmployeePayment(employeeId: number, payload: ISettlePaymentPayload): Promise<void> {
+  try {
+    await api.post(`/api/employee/settle-payment/${employeeId}`, payload);
+  } catch (error) {
+    throw handleApiError(error, 'Ocorreu um erro ao fechar a folha do colaborador.');
+  }
+}
+
+
+export async function settleAllEmployeePayments(payload: ISettleAllPaymentsPayload): Promise<void> {
+  try {
+    await api.post('/api/employee/settle-all-payments', payload);
+  } catch (error) {
+    throw handleApiError(error, 'Ocorreu um erro ao fechar a folha de todos os colaboradores.');
+  }
 }

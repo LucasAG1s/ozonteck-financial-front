@@ -83,7 +83,7 @@ export function Expenses() {
   const { companies, loading: isLoadingCompanies } = useCompanies();
   const { data: accountPlans = [], isLoading: isLoadingPlans } = useQuery<IAccountPlan[]>({
     queryKey: ['accountPlans'],
-    queryFn: getAccountPlans,
+    queryFn: () => getAccountPlans({type: 2}),
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
   });
@@ -104,7 +104,7 @@ export function Expenses() {
   const { data: paymentMethod = [], isLoading: isLoadingPaymentMethod } = useQuery<PaymentMethod[]>({
     queryKey: ['paymentMethod'],
     queryFn: getPaymentMethods,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 10000 * 60 * 5, 
     refetchOnWindowFocus: false,
   }); 
 
@@ -244,7 +244,7 @@ export function Expenses() {
       placeholder: 'Selecione um plano',
       options: [
         { value: 'null', label: 'Selecione um plano' },
-        ...accountPlans.filter(p => p.type === 2 && p.parent_id != null).map(p => ({ value: p.id, label: `${p.name} (${p.id})` }))
+        ...accountPlans.filter(p => p.parent_id != null).map(p => ({ value: p.id, label: `${p.name} (${p.id})` }))
       ],
       gridCols: 1,
     },

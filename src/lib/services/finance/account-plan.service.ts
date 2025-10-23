@@ -8,10 +8,16 @@ export type UpdateAccountPlanPayload = Partial<CreateAccountPlanPayload>;
 
 
 
-export async function getAccountPlans(): Promise<IAccountPlan[]> {
+export async function getAccountPlans(filters?: { type?: number }): Promise<IAccountPlan[]> {
   try {
     const response = await api.get<IAccountPlan[]>('/api/account-plan');
-    return response.data;
+    let accountPlans = response.data;
+
+    if (filters?.type) {
+      accountPlans = accountPlans.filter(plan => plan.type === filters.type && plan.parent_id != null);
+    }
+
+    return accountPlans;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao buscar os planos de contas.');
   }

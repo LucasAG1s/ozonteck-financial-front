@@ -17,7 +17,7 @@ import { FormFieldsRenderer } from './FormFieldsRenderer';
 export interface FormFieldConfig<TFieldValues extends z.AnyZodObject> {
   name: Path<z.infer<TFieldValues>>; 
   label: string; 
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'datetime-local' | 'file' | 'email' | 'password';
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'datetime-local' | 'file' | 'email' | 'password' |'month';
   accept?: string;
   placeholder?: string;
   options?: { value: string | number; label: string }[];

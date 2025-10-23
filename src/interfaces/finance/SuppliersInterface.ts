@@ -39,9 +39,10 @@ export interface ISupplierData{
   id:number
   supplier_id:number
   state_registration:number | null
+  cnpj:string | null
   municipal_registration:number | null
-  tax_regime:string 
-  crt_code:string
+  tax_regime: 'SN' | 'LP' | 'LR' | 'ME' | 'LA' | 'MEI' | null
+  crt_code: '1' | '2' | '3' | '4' | null
 }
 
 export interface ISupplierEdit{

@@ -21,7 +21,7 @@ const addressSchema = z.object({
   neighborhood: z.string().min(3, 'O bairro deve ter pelo menos 3 caracteres.'),
   number: z.string().min(1, 'O número é obrigatório.'),
   zip_code: z.string().min(8, 'O CEP deve ter 8 dígitos.').max(9, 'O CEP deve ter no máximo 9 dígitos.'), // Assumindo formato 00000-000 ou 00000000
-  city_id: z.coerce.number({ invalid_type_error: 'Cidade é obrigatória.' }).min(1, 'Cidade é obrigatória.'),
+  city_id: z.coerce.number({ invalid_type_error: 'Cidade é obrigatória.' }).min(1, 'Cidade é obrigatória.').optional().or(z.literal(undefined)),
   state_id: z.coerce.number({ invalid_type_error: 'Estado é obrigatório.' }).min(1, 'O estado é obrigatório.'),
   country_id: z.coerce.number({ invalid_type_error: 'País é obrigatório.' }).min(1, 'País é obrigatório.'),
 });

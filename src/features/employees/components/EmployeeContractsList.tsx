@@ -86,6 +86,7 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
         ...data, 
         is_unionized: data.is_unionized ? 1 : 0,
         active: data.active ? 1 : 0,
+        work_schedule: data.work_schedule || null,
       };
       updateContractMutation({ id: contractToEdit.id, payload: payload as UpdateContractPayload });
     } else {
@@ -94,6 +95,7 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
         employee_id: employee.id, 
         is_unionized: data.is_unionized ? 1 : 0,
         active: data.active ? 1 : 0,
+        work_schedule: data.work_schedule || null,
       };
       createContractMutation(payloadWithEmployeeId);
     }

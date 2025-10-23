@@ -31,8 +31,8 @@ const crtCodeOptions = [
 const dataSchema = z.object({
   state_registration: z.coerce.number().nullable().optional(),
   municipal_registration: z.coerce.number().nullable().optional(),
-  tax_regime: z.enum(['SN', 'LP', 'LR', 'ME', 'LA', 'MEI']).nullable().optional(),
-  crt_code: z.enum(['1', '2', '3', '4']).nullable().optional(),
+  tax_regime: z.enum(['SN', 'LP', 'LR', 'ME', 'LA', 'MEI'], { invalid_type_error: 'Regime tributário inválido' }).nullable().optional(),
+  crt_code: z.preprocess((val) => String(val), z.enum(['1', '2', '3', '4'], { invalid_type_error: 'CRT inválido' })).nullable().optional(),
 });
 
 type DataFormData = z.infer<typeof dataSchema>;
@@ -47,15 +47,15 @@ export function SupplierDataForm({ data }: SupplierDataFormProps) {
   const form = useForm<DataFormData>({
     resolver: zodResolver(dataSchema),
     defaultValues: {
-      state_registration: data?.state_registration ?? undefined,
-      municipal_registration: data?.municipal_registration ?? undefined,
-      tax_regime: data?.tax_regime || '',
-      crt_code: data?.crt_code || '',
+      state_registration: data.state_registration ?? null,
+      municipal_registration: data.municipal_registration ?? null,
+      tax_regime: data.tax_regime ?? null,
+      crt_code: data.crt_code ?? null,
     },
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (formData: DataFormData) => updateSupplierData(data.id, formData),
+    mutationFn: (formData: DataFormData) => updateSupplierData(data.id, { ...data, ...formData }),
     onSuccess: () => {
       toast.success('Dados fiscais atualizados com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['supplier', String(data.supplier_id)] });

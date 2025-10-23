@@ -72,11 +72,6 @@ export function Dashboard() {
           <h1 className="text-3xl font-bold text-foreground">Dashboard Gerencial</h1>
           <p className="text-muted-foreground">Visão geral do sistema financeiro</p>
         </div>
-        <div>
-          
-        </div>
-        0033166923798349
-
         <DateRangeFilter
           startDate={startDate}
           endDate={endDate}

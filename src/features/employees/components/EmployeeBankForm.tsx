@@ -99,7 +99,7 @@ export function EmployeeBankForm({ bank }: EmployeeBankFormProps) {
             )}
             <FormField
               control={form.control}
-              name="agency_number"
+              name="agency"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Número da Agência</FormLabel>

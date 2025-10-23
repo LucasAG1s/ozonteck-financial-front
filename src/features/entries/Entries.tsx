@@ -63,8 +63,8 @@ export function Entries() {
   const { companies, loading: isLoadingCompanies } = useCompanies();
   const { data: accountPlans = [], isLoading: isLoadingPlans } = useQuery({
     queryKey: ['accountPlans'],
-    queryFn: getAccountPlans,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    queryFn: () => getAccountPlans({type:1}),
+    staleTime: 10000 * 60 * 5, // 5 minutos
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
@@ -175,8 +175,8 @@ export function Entries() {
       type: 'select',
       placeholder: 'Selecione um plano',
       options: [
-        { value: 'null', label: 'Selecione um plano' }, // Opção padrão com valor não-vazio
-        ...accountPlans.filter(p => p.type === 1 && p.parent_id != null).map(p => ({ value: p.id, label: `${p.name} (${p.id})` }))
+        { value: 'null', label: 'Selecione um plano' },
+        ...accountPlans.filter(p => p.parent_id != null).map(p => ({ value: p.id, label: `${p.name} (${p.id})` }))
       ],
       gridCols: 1,
     },

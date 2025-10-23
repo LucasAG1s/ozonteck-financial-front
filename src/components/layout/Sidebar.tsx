@@ -43,9 +43,8 @@ const navigation: NavItem[] = [
   { name: 'Colaboradores', href: '/employees', icon: Users },
   { name: 'Fornecedores', href: '/suppliers', icon: Truck },
   { name: 'Pagamentos', icon: CreditCard, children: [
-    { name: 'Funcionários', href: '/pagamentos/funcionarios', icon: Users },
-    { name: 'Fornecedores', href: '/pagamentos/fornecedores', icon: Truck },
-  ] },
+    { name: 'Funcionários', href: '/payments/employees', icon: Users },]
+  },
   { name: 'Integrações', href: '/integracoes', icon: Building },
   { name: 'Relatórios', href: '/reports', icon: FileText },
   { name: 'Usuários', href: '/usuarios', icon: Settings },
@@ -126,6 +125,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                               )}
                               onClick={onClose}
                             >
+                              <child.icon className="mr-3 h-5 w-5 flex-shrink-0" />
                               {child.name}
                             </Link>
                           );
