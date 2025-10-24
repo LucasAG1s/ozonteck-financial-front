@@ -24,6 +24,7 @@ const employeeSchema = z.object({
   phone: z.string().min(10, 'O telefone é obrigatório.'),
   email: z.string().email('O e-mail é inválido.'),
   document_number: z.string().min(11, 'O CPF/CNPJ é obrigatório.'),
+  admission_date: z.string().min(1, 'A data de admissão é obrigatória.'),
   company_id: z.coerce.number().min(1, 'A empresa é obrigatória.'),
   active: z.coerce.boolean().default(true),
   avatar: z.any()
@@ -151,6 +152,7 @@ export function Employees() {
     },
     { name:'document_number', label: 'CPF/CNPJ',type:'text', placeholder:'000.000.000-00', gridCols: 1, disabled: false},
     { name: 'active', label: 'Status', type: 'select', options: [{ value: 'true', label: 'Ativo' }, { value: 'false', label: 'Inativo' }], gridCols: 1, disabled: false },
+    { name: 'admission_date', label: 'Data de Admissão', type: 'date', gridCols: 1, disabled: false},
     { name: 'avatar', label: 'Foto', type: 'file', accept: '.png,.jpg,.jpeg,.webp', gridCols: 2, disabled: false },
   ];
 

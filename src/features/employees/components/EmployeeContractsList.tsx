@@ -5,22 +5,25 @@ import { toast } from 'react-toastify';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createContract, updateContract, deleteContract, UpdateContractPayload } from '@/lib/services/hr/employees.service';
 import { IEmployee as Employee, IEmployeeContract as EmployeeContract} from '@/interfaces/HR/EmployeeInterface';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
-import { getCompanies } from '@/lib/services/finance/company.service';
+import { getCompanies } from '@/lib/services/finance/company.service'; 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ICompany as Company } from '@/interfaces/universal/CompanyInterface';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog';
 import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm';
 import {ISector as Sector} from '@/interfaces/HR/SectorInterface';
 import { getSectors } from '@/lib/services/hr/sectors.service';
+import { cn } from '@/lib/utils';
+import { SalaryHistoryModal } from './SalaryHistoryModal';
 
 const contractSchema = z.object({
   company_id: z.coerce.number().min(1, 'A empresa é obrigatória.'),
   contract_type: z.string().min(1, 'O tipo de contrato é obrigatório.'),
-  admission_date: z.string().min(1, 'A data de admissão é obrigatória.'),
+  admission_date: z.string().min(1, 'A data de admissão é obrigatória.'), 
   salary: z.coerce.string().min(1, 'O salário é obrigatório.'),
   position: z.string().min(1, 'O cargo é obrigatório.').nullable(),
   sector_id: z.coerce.number().min(1, 'O setor é obrigatório.'),
@@ -41,6 +44,8 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
   const [contractToEdit, setContractToEdit] = useState<EmployeeContract | null>(null);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<number | null>(null);
+  const [isSalaryHistoryModalOpen, setIsSalaryHistoryModalOpen] = useState(false);
+  const [selectedContractForHistory, setSelectedContractForHistory] = useState<EmployeeContract | null>(null);
 
   const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[]>({
     queryKey: ['companies'],
@@ -96,6 +101,7 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
         is_unionized: data.is_unionized ? 1 : 0,
         active: data.active ? 1 : 0,
         work_schedule: data.work_schedule || null,
+        salaries: [], 
       };
       createContractMutation(payloadWithEmployeeId);
     }
@@ -107,7 +113,14 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
   };
 
   const handleEditClick = (contract: EmployeeContract) => {
-    setContractToEdit(contract);
+    const currentSalary = contract.salaries?.sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())[0];
+    const contractForEdit = {
+      ...contract,
+      salary: currentSalary?.salary || '0', 
+      is_unionized: !!contract.is_unionized,
+      active: !!contract.active,
+    };
+    setContractToEdit(contractForEdit as any); 
     setIsModalOpen(true);
   };
 
@@ -120,6 +133,11 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
     if (contractToDelete) {
       deleteContractMutation(contractToDelete);
     }
+  };
+
+  const handleOpenSalaryHistory = (contract: EmployeeContract) => {
+    setSelectedContractForHistory(contract);
+    setIsSalaryHistoryModalOpen(true);
   };
 
   const formFields = (watch: Function): FormFieldConfig<typeof contractSchema>[] => {
@@ -182,14 +200,38 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
                     </TableRow>
                   ) : (
                     contracts.map((contract) => {
-                      const companyName = companies.find(c => c.id === contract.company_id)?.corporate_name || 'Empresa não encontrada';
+                      const currentSalary = contract.salaries?.sort((a, b) => new Date(b.effective_date).getTime() - new Date(a.effective_date).getTime())[0];
+                      const companyName = companies.find(c => c.id === contract.company_id)?.corporate_name || '...';
                       return (
                         <TableRow key={contract.id}>
                           <TableCell>{contract.contract_type}</TableCell>
                           <TableCell>{companyName}</TableCell>
                           <TableCell>{contract.position || 'N/A'}</TableCell>
-                          <TableCell>{formatCurrency(Number(contract.salary))}</TableCell>
-                          <TableCell>{new Date(contract.admission_date).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <span className="cursor-pointer  decoration-dashed">
+                                  {currentSalary ? formatCurrency(Number(currentSalary.salary)) : 'N/A'}
+                                </span>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-80">
+                                <div className="grid gap-4">
+                                  <div className="space-y-2">
+                                    <h4 className="font-medium leading-none">Histórico Salarial</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                      Salários anteriores para este contrato.
+                                    </p>
+                                  </div>
+                                  <ul className="text-sm space-y-1">
+                                    {contract.salaries?.map(s => (
+                                      <li key={s.id} className="flex justify-between"><span>{formatCurrency(Number(s.salary))}</span> <span className="text-muted-foreground">desde {new Date(s.effective_date).toLocaleDateString('pt-BR')}</span></li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          </TableCell>
+                          <TableCell>{new Date(contract.admission_date + 'T00:00:00').toLocaleDateString('PT-BR')}</TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded-full text-xs ${
                               contract.active
@@ -200,12 +242,17 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
                             </span>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => handleEditClick(contract)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(contract.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <div className='flex items-center justify-end gap-2'>
+                              <button onClick={() => handleOpenSalaryHistory(contract)} className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }))} title="Ver Histórico de Salários">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                              </button>
+                              <button className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }))} onClick={() => handleEditClick(contract)} title="Editar Contrato">
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }))} onClick={() => handleDeleteClick(contract.id)} title="Excluir Contrato">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -223,7 +270,7 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
         onOpenChange={(isOpen) => { if (!isOpen) setContractToEdit(null); setIsModalOpen(isOpen); }}
         onSubmit={handleFormSubmit}
         isLoading={isCreating || isUpdating}
-        initialData={contractToEdit ? { ...contractToEdit, is_unionized: !!contractToEdit.is_unionized, active: !!contractToEdit.active } : { company_id: companies[0]?.id, active: true }}
+        initialData={contractToEdit || { company_id: companies[0]?.id, active: true }}
         fields={formFields}
         schema={contractSchema}
         title={contractToEdit ? 'Editar Contrato' : 'Novo Contrato'}
@@ -237,6 +284,15 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
         isDeleting={isDeleting}
         title="Excluir Contrato?"
         description="Essa ação não pode ser desfeita. Isso irá excluir permanentemente o contrato do colaborador."
+      />
+
+      <SalaryHistoryModal
+        isOpen={isSalaryHistoryModalOpen}
+        onOpenChange={(isOpen) => {
+          setIsSalaryHistoryModalOpen(isOpen);
+          if (!isOpen) setSelectedContractForHistory(null);
+        }}
+        contract={selectedContractForHistory}
       />
     </>
   );

@@ -17,10 +17,7 @@ export async function getSuppliers(): Promise<ISupplier[]> {
 
 export async function getSupplierById(id: string): Promise<ISupplierEdit> {
   try {
-
     const response = await api.get<ISupplierEdit>(`/api/supplier/edit/${id}`);
-
-    console.log(response.data)
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao buscar o fornecedor.');

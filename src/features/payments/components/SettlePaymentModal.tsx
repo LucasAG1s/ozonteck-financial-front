@@ -91,13 +91,13 @@ export function SettlePaymentModal({
   const { data: paymentMethod = [], isLoading: isLoadingPaymentMethod } = useQuery<IPaymentMethod[]>({
       queryKey: ['paymentMethod'],
       queryFn: getPaymentMethods,
-      staleTime: 1000 * 60 * 5, // 5 minutos
+      staleTime: 1000 * 60 * 5, 
       refetchOnWindowFocus: false,
     }); 
 
   const { data: accountPlans = [], isLoading: isLoadingPlans } = useQuery<IAccountPlan[]>({
     queryKey: ['accountPlans', 'expenses'],
-    queryFn: () => getAccountPlans({ type: 2 }), // Filtra por despesas
+    queryFn: () => getAccountPlans({ type: 2 }), 
     enabled: isOpen,
     staleTime: 1000 * 60 * 5,
   });

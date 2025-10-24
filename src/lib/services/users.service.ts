@@ -41,8 +41,6 @@ function buildFormData(payload: Record<string, any>, isUpdate: boolean = false):
 export async function getUsers(): Promise<User[]> {
   try {
     const response = await api.get<User[]>('/api/user');
-
-    console.log(response.data)
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao buscar os usuários.');

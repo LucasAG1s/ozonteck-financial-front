@@ -66,8 +66,8 @@ export function PaymentsEmployees() {
   });
 
   const { mutate: settleAllPaymentsMutation, isPending: isSettlingAll } = useMutation({
-    mutationFn: (payload: Omit<ISettleAllPaymentsPayload, 'company_id'>) => 
-      settleAllEmployeePayments({ ...payload, company_id: selectedCompany!.id }),
+    mutationFn: (payload: Omit<ISettleAllPaymentsPayload, 'company_id'>) =>
+      settleAllEmployeePayments(selectedCompany!.id, { ...payload, company_id: selectedCompany!.id }),
     onSuccess: () => {
       toast.success("Todos os pagamentos foram liquidados com sucesso!");
       queryClient.invalidateQueries({ queryKey: ['employeePayments', selectedCompany?.id, referenceMonth] });
@@ -274,7 +274,7 @@ export function PaymentsEmployees() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => setRegisterPaymentModal({ isOpen: true, employee: payment })}>
+                                                    <DropdownMenuItem onClick={() => setRegisterPaymentModal({ isOpen: true, employee: payment })} disabled={balance <= 0 || isSettling }>
                                                         Registrar Pagamento
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
@@ -314,6 +314,7 @@ export function PaymentsEmployees() {
         onSubmit={handleRegisterPaymentSubmit}
         isLoading={isCreatingPayment}
         employee={registerPaymentModal.employee}
+        referenceMonth={referenceMonth}
       />
     </div>
   )

@@ -5,6 +5,7 @@ import {
   IEmployeeBank,
   IEmployeeContract,
   IEmployeeData,
+  IEmployeeSalaryHistory,
   IEmployeePayment,
   IEmployeePaymentSummary,
   ISettleAllPaymentsPayload,
@@ -25,7 +26,7 @@ function buildFormData(payload: Record<string, any>, isUpdate: boolean = false):
 }
 
 
-export type CreateEmployeePayload = Omit<IEmployee, 'id' | 'created_at' | 'updated_at'|'contracts'|'data'|'address'|'bank' | 'payments'> & { document_number?: string; avatar?: File | null };
+export type CreateEmployeePayload = Omit<IEmployee, 'description'|'id' | 'created_at' | 'updated_at'|'contracts'|'data'|'address'|'bank' | 'payments'> & { document_number?: string; avatar?: File | null };
 export type UpdateEmployeePayload = Partial<CreateEmployeePayload>;
 
 
@@ -37,7 +38,6 @@ export async function getEmployees(companyId: number): Promise<IEmployee[]> {
       }
     });
 
-    console.log(response)
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao buscar os colaboradores.');
@@ -48,12 +48,9 @@ export async function getEmployees(companyId: number): Promise<IEmployee[]> {
 export async function createEmployee(payload: CreateEmployeePayload): Promise<IEmployee> {
   try {
     const data = buildFormData(payload);
-
-    console.log(data);
     const response = await api.post<IEmployee>('/api/employee/create', data, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
-        console.log(response.data)
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao criar o colaborador.');
@@ -64,7 +61,6 @@ export async function createEmployee(payload: CreateEmployeePayload): Promise<IE
 export async function updateEmployee(id: number, payload: UpdateEmployeePayload): Promise<IEmployee> {
   try {
     const response = await api.post<IEmployee>(`/api/employee/update/${id}`, payload);
-
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao atualizar o colaborador.');
@@ -123,7 +119,7 @@ export async function createContract(payload: CreateContractPayload): Promise<IE
   }
 }
 
-export type UpdateContractPayload = Partial<Omit<IEmployeeContract, 'id' | 'employee_id' | 'sector'>>;
+export type UpdateContractPayload = Partial<Omit<IEmployeeContract, 'id' | 'employee_id' | 'sector' | 'salary' | 'salaries'>>;
 export async function updateContract(contractId: number, payload: UpdateContractPayload): Promise<IEmployeeContract> {
   try {
     const response = await api.post<IEmployeeContract>(`/api/employee/contract/update/${contractId}`, payload);
@@ -132,6 +128,18 @@ export async function updateContract(contractId: number, payload: UpdateContract
     throw handleApiError(error, 'Ocorreu um erro ao atualizar o contrato.');
   }
 }
+
+export type CreateSalaryPayload = Omit<IEmployeeSalaryHistory, 'id'>;
+
+export async function createSalary(payload: CreateSalaryPayload): Promise<IEmployeeSalaryHistory> {
+  try {
+    const response = await api.post<IEmployeeSalaryHistory>('/api/employee/salary/create', payload);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, 'Ocorreu um erro ao registrar o novo salário.');
+  }
+}
+
 
 export async function deleteContract(contractId: number): Promise<void> {
   try {
@@ -143,7 +151,7 @@ export async function deleteContract(contractId: number): Promise<void> {
 
 export async function deleteEmployee(id: number): Promise<void> {
   try {
-    await api.delete(`/api/employees/delete/${id}`);
+    await api.delete(`/api/employee/delete/${id}`);
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao excluir o colaborador.');
   }
@@ -162,7 +170,7 @@ export async function getEmployeeById(id: number): Promise<IEmployee> {
 export type CreateEmployeePaymentPayload = Omit<IEmployeePayment, 'id'>;
 export async function createEmployeePayment(payload: CreateEmployeePaymentPayload): Promise<IEmployeePayment> {
   try {
-    const response = await api.post<IEmployeePayment>('/api/employee/payment/create', payload);
+    const response = await api.post<IEmployeePayment>('/api/employee-payment/create', payload);
     return response.data;
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao registrar o pagamento do colaborador.');
@@ -177,6 +185,7 @@ export async function getPaymentsData(companyId:number, reference_month:string):
         reference_month
       }
     })
+
     console.log(response.data)
     return response.data
   }catch(error){
@@ -187,16 +196,16 @@ export async function getPaymentsData(companyId:number, reference_month:string):
 
 export async function settleEmployeePayment(employeeId: number, payload: ISettlePaymentPayload): Promise<void> {
   try {
-    await api.post(`/api/employee/settle-payment/${employeeId}`, payload);
+    await api.post(`/api/employee-payment/settle-payment/${employeeId}`, payload);
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao fechar a folha do colaborador.');
   }
 }
 
 
-export async function settleAllEmployeePayments(payload: ISettleAllPaymentsPayload): Promise<void> {
+export async function settleAllEmployeePayments(company_id:number,payload: ISettleAllPaymentsPayload): Promise<void> {
   try {
-    await api.post('/api/employee/settle-all-payments', payload);
+    await api.post(`/api/employee-payment/settle-all-payments/${company_id}`, payload);
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao fechar a folha de todos os colaboradores.');
   }

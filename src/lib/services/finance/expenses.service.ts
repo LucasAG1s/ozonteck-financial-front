@@ -28,7 +28,6 @@ export async function getExpenses(startDate:string, endDate:string, company:stri
                 company_id:company
             }}
         )
-        console.log(response.data);
         return response.data
     }catch (error) {
        throw handleApiError(error, 'Ocorreu um erro ao buscar as despesas.');

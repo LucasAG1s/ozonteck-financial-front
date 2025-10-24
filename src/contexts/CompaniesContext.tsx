@@ -1,6 +1,7 @@
 // src/contexts/CompaniesContext.tsx
-import { createContext, useEffect, useState } from "react"
-import { getCompanies} from "@/lib/services/finance/company.service"
+import { createContext, useState, useEffect } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { getCompanies } from "@/lib/services/finance/company.service"
 import { ICompany as Company } from "@/interfaces/universal/CompanyInterface"
 
 interface CompaniesContextType {
@@ -12,42 +13,29 @@ interface CompaniesContextType {
 
 export const CompaniesContext = createContext<CompaniesContextType | undefined>(undefined)
 
-const CACHE_KEY = "companies_cache"
-const CACHE_TIME = 1000 * 60 * 15 
-
 export function CompaniesProvider({ children }: { children: React.ReactNode }) {
-  const [companies, setCompanies] = useState<Company[]>([])
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true)
-        const cached = localStorage.getItem(CACHE_KEY)
-        if (cached) {
-          const parsed = JSON.parse(cached)
-          const now = new Date().getTime()
-          if (now - parsed.timestamp < CACHE_TIME) {
-            setCompanies(parsed.data)
-            setSelectedCompany(parsed.data[0] ?? null)
-            setLoading(false)
-            return
-          }
-        }
-        const data = await getCompanies()
-        setCompanies(data)
-        setSelectedCompany(data[0] ?? null)
-        localStorage.setItem(
-          CACHE_KEY,
-          JSON.stringify({ timestamp: new Date().getTime(), data })
-        )
-      } finally {
-        setLoading(false)
-      }
+    const storedCompanyId = localStorage.getItem('selectedCompanyId');
+    if (storedCompanyId) {
     }
-    load()
   }, [])
+
+  const { data: companies = [], isLoading: loading } = useQuery<Company[]>({
+    queryKey: ['companies'],
+    queryFn: getCompanies,
+    staleTime: 1000 * 60 * 15, 
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    if (companies.length > 0 && !selectedCompany) {
+      const storedCompanyId = localStorage.getItem('selectedCompanyId');
+      const companyToSelect = companies.find(c => c.id === Number(storedCompanyId)) || companies[0];
+      setSelectedCompany(companyToSelect);
+    }
+  }, [companies, selectedCompany]);
 
   return (
     <CompaniesContext.Provider value={{ companies, selectedCompany, setSelectedCompany, loading }}>
@@ -55,4 +43,3 @@ export function CompaniesProvider({ children }: { children: React.ReactNode }) {
     </CompaniesContext.Provider>
   )
 }
-

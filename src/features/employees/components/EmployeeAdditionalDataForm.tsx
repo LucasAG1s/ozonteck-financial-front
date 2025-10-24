@@ -39,7 +39,7 @@ export function EmployeeAdditionalDataForm({ data }: EmployeeAdditionalDataFormP
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (formData: AdditionalDataFormData) => updateEmployeeData(data.employee_id, formData),
+    mutationFn: (formData: AdditionalDataFormData) => updateEmployeeData(data.id, formData),
     onSuccess: () => {
       toast.success('Dados adicionais atualizados com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['employee', String(data.id)] });

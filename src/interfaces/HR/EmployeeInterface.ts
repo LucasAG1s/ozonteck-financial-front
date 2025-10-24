@@ -35,11 +35,21 @@ export interface IEmployeePayments{
   id:number
   employee_id:number
   company_id:number
+  description:string
 	type:String
   amount:string	
   reference_month: string 
   paid_at: string 
   }
+
+export interface IEmployeeSalaryHistory {
+  id: number;
+  employee_id: number;
+  employee_contract_id: number;
+  salary: string;
+  reference_month: string;
+  effective_date: string;
+}
 
 export interface IEmployeeContract {
   id: number
@@ -47,7 +57,8 @@ export interface IEmployeeContract {
   company_id: number
   contract_type: string
   admission_date: string
-  salary: string
+  salaries: IEmployeeSalaryHistory[]
+  salary:string
   position: string | null
   active: number
   sector_id: number
@@ -59,7 +70,9 @@ export interface IEmployeeContract {
 export interface IEmployee {
   id: number
   name: string
+  admission_date:string
   phone: string
+  description:string
   email: string
   contracts: IEmployeeContract[]
   data: IEmployeeData

@@ -1,6 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { IEmployee as Employee } from '@/interfaces/HR/EmployeeInterface';
-import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
 
@@ -29,7 +28,7 @@ export function EmployeePaymentsList({ employee }: EmployeePaymentsListProps) {
                   <TableHead>Valor</TableHead>
                   <TableHead>Mês Referência</TableHead>
                   <TableHead>Data Pagamento</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-center">Descrição</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -39,9 +38,7 @@ export function EmployeePaymentsList({ employee }: EmployeePaymentsListProps) {
                     <TableCell>{formatCurrency(Number(payment.amount))}</TableCell>
                     <TableCell>{new Date(payment.reference_month).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</TableCell>
                     <TableCell>{new Date(payment.paid_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">Ver Detalhes</Button>
-                    </TableCell>
+                    <TableCell className="text-center">{payment.description}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

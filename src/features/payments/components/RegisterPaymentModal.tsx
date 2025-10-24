@@ -20,6 +20,7 @@ interface RegisterPaymentModalProps {
   onSubmit: (payload: CreateEmployeePaymentPayload) => void;
   isLoading: boolean;
   employee?: IEmployeePaymentSummary;
+  referenceMonth: string;
 }
 
 const paymentSchema = z.object({
@@ -47,6 +48,7 @@ export function RegisterPaymentModal({
   onSubmit,
   isLoading,
   employee,
+  referenceMonth,
 }: RegisterPaymentModalProps) {
   if (!employee) return null;
 
@@ -123,8 +125,8 @@ export function RegisterPaymentModal({
       isLoading={isLoading}
       initialData={{
         type: 'adiantamento',
-        paid_at: format(new Date(), 'yyyy-MM-dd'),
-        reference_month: format(new Date(), 'yyyy-MM'),
+        paid_at: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+        reference_month: referenceMonth,
       }}
       fields={formFields}
       schema={paymentSchema}
