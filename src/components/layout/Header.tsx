@@ -42,7 +42,7 @@ export function Header({ onMenuClick, onProfileEditClick }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="flex items-center space-x-2">
-                <span>{selectedCompany?.trade_name}</span>
+                <span>{selectedCompany?.trade_name} - {selectedCompany?.corporate_name}</span>
                 <ChevronDown className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -53,7 +53,7 @@ export function Header({ onMenuClick, onProfileEditClick }: HeaderProps) {
                   onClick={() => setSelectedCompany(empresa)}
                   className="flex flex-col items-start p-3"
                 >
-                  <div className="font-medium">{empresa.trade_name}</div>
+                  <div className="font-medium">{empresa.trade_name} - {empresa.corporate_name}</div>
                   <div className="text-xs text-muted-foreground">CNPJ: {formatCNPJ(empresa.cnpj)}</div>
                 </DropdownMenuItem>
               ))}

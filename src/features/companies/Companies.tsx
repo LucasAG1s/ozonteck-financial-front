@@ -245,10 +245,10 @@ export function Companies() {
       <Card>
         <CardHeader>
           <CardTitle>Lista de Empresas</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar por razão social, CNPJ ou nome fantasia..." value={busca} onChange={(e) => setBusca(e.target.value)} className="max-w-sm" />
-          </div>
+          <div className="relative top-2">
+              <Search className="absolute right-2 top-3 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Buscar CNPJ ou Razão Social..." value={busca} onChange={(e) => setBusca(e.target.value)} className="max-w-sm" />
+            </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -256,7 +256,7 @@ export function Companies() {
               <TableRow>
                 <TableHead>Razão Social</TableHead>
                 <TableHead>CNPJ</TableHead>
-                <TableHead>Nome Fantasia</TableHead>
+                <TableHead>ABREVIAÇÃO</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead className='text-right'>Ações</TableHead>
               </TableRow>
