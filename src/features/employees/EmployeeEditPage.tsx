@@ -12,6 +12,9 @@ import { EmployeeAddressForm } from './components/EmployeeAddressForm';
 import { EmployeeBankForm } from './components/EmployeeBankForm';
 import { EmployeeContractsList } from './components/EmployeeContractsList';
 import { EmployeePaymentsList } from './components/EmployeePaymentsList';
+import { EmployeeFilesList } from './components/EmployeeFilesList';
+import { EmployeeObservationsList } from './components/EmployeeObservationsForm';
+
 
 export function EmployeeEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -58,14 +61,16 @@ export function EmployeeEditPage() {
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <div className="overflow-x-auto scrollbar-hide">
-          <TabsList className="grid w-full grid-cols-[repeat(6,minmax(120px,1fr))] md:grid-cols-6">
+        <div className="mb-4">
+          <TabsList className="h-auto flex flex-wrap justify-start md:grid md:grid-cols-8 md:h-10 md:divide-x md:divide-gray-200 dark:md:divide-gray-700">
             <TabsTrigger value="general">Dados Gerais</TabsTrigger>
             <TabsTrigger value="additional-data">Dados Adicionais</TabsTrigger>
             <TabsTrigger value="address">Endereço</TabsTrigger>
             <TabsTrigger value="bank">Dados Bancários</TabsTrigger>
             <TabsTrigger value="contracts">Contratos</TabsTrigger>
             <TabsTrigger value="payments">Pagamentos</TabsTrigger>
+            <TabsTrigger value='files'>Arquivos</TabsTrigger>
+            <TabsTrigger value='observations'>Observações</TabsTrigger>
           </TabsList>
         </div>
 
@@ -86,6 +91,12 @@ export function EmployeeEditPage() {
         </TabsContent>
         <TabsContent value="payments">
           <EmployeePaymentsList employee={employee} />
+        </TabsContent>
+        <TabsContent value="files">
+          <EmployeeFilesList employee={employee} />
+        </TabsContent>
+        <TabsContent value="observations">
+          <EmployeeObservationsList employee={employee}/>
         </TabsContent>
       </Tabs>
     </div>

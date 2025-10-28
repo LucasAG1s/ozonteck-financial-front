@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import api from '../axios';
+import axios, { AxiosError } from 'axios';
+
 
 export const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -48,35 +50,51 @@ export interface ApiError {
 }
 
 const handleApiError = (error: unknown): ApiError => {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
-    const axiosError = error as {
-      response: {
-        data: Record<string, unknown>;
-        status: number;
-      };
-      message: string;
-    };
+    if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError;
+        
+        if (axiosError.response) {
+            const data = axiosError.response.data as any;
+            const status = axiosError.response.status;
+            let apiMessage = 'Ocorreu um erro inesperado de comunicação';
+            let errorCode: string | undefined;
 
-    return {
-      message:
-        (axiosError.response.data.message as string) ||
-        (axiosError.response.data.error as string) ||
-        axiosError.message ||
-        'Erro desconhecido',
-      status: axiosError.response.status,
-      details: axiosError.response.data
-    };
-  }
+            if (data) {
+                if (data.error && data.error.message) {
+                    apiMessage = data.error.message;
+                    errorCode = data.error.code;
+                } 
+                else if (status === 422 && data.errors) {
+                    const firstErrorKey = Object.keys(data.errors)[0];
+                    if (firstErrorKey) {
+                        apiMessage = data.errors[firstErrorKey][0] || apiMessage;
+                    }
+                }
+                else if (data.message) {
+                    apiMessage = data.message;
+                }
+            }
 
-  if (error instanceof Error) {
-    return {
-      message: error.message,
-    };
-  }
+            return {
+                message: apiMessage,
+                code: errorCode,
+                status: status,
+                details: data,
+            };
+        }
+        
+        if (axiosError.message) {
+            return {
+                message: axiosError.message, 
+            };
+        }
+    }
 
-  return {
-    message: 'Erro desconhecido',
-  };
+    if (error instanceof Error) {
+        return { message: error.message };
+    }
+
+    return { message: 'Erro desconhecido. Verifique o console.' };
 };
 
 

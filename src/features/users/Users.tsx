@@ -33,8 +33,8 @@ const userSchema = z.object({
     },
     { message: "A senha deve ter no mínimo 8 caracteres, com maiúsculas, minúsculas e números." }
   ),
-  role: z.string().min(1, "O perfil é obrigatório."), // Ajustado para string para compatibilidade com o form
-  status: z.enum(['ativo', 'inativo']),
+  role: z.string().min(1, "O perfil é obrigatório."), 
+  active: z.number().min(0,"O status é obrigatório.").max(1,'O status deve ser Ativo ou Inativo'),
   avatar: z.any()
     .transform((value) => {
       if (value instanceof FileList) return value[0] || null;
@@ -59,8 +59,8 @@ export function Usuarios() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [modalPermissoesAberto, setModalPermissoesAberto] = useState(false)
-  const [userToEdit, setUserToEdit] = useState<User | null>(null); // Usuário para o form de edição
-  const [userToManagePermissions, setUserToManagePermissions] = useState<User | null>(null); // Usuário para o modal de permissões
+  const [userToEdit, setUserToEdit] = useState<User | null>(null); 
+  const [userToManagePermissions, setUserToManagePermissions] = useState<User | null>(null); 
   const [selectedPermissions, setSelectedPermissions] = useState<Set<number>>(new Set());
   const [userToDelete, setUserToDelete] = useState<number | null>(null);
 
@@ -110,7 +110,7 @@ export function Usuarios() {
     mutationFn: ({ userId, permissionIds }: { userId: number, permissionIds: number[] }) => syncUserPermissions(userId, permissionIds),
     onSuccess: () => {
       toast.success("Permissões atualizadas com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ['users'] }); // Invalida a query de usuários para buscar os dados atualizados
+      queryClient.invalidateQueries({ queryKey: ['users'] }); 
       setModalPermissoesAberto(false);
       setUserToManagePermissions(null);
     },
@@ -121,24 +121,30 @@ export function Usuarios() {
     const matchSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                       user.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchRole = !roleFilter || (user.roles && user.roles[0] && user.roles[0].name.toLowerCase() === roleFilter);
-    const matchStatus = !statusFilter || user.status === statusFilter
+    const matchStatus = !statusFilter || user.active === 1;
     
     return matchSearch && matchRole && matchStatus
   }), [users, searchTerm, roleFilter, statusFilter]);
 
-  const activeUsersCount = users.filter(u => u.status === 'ativo').length;
+  const activeUsersCount = users.filter(u => u.active === 1).length;
   const masterUsersCount = users.filter(u => u.roles && u.roles[0]?.name.toLowerCase() === 'master').length;
+  const adminUsersCount = users.filter(u => u.roles && u.roles[0]?.name.toLowerCase() === 'admin').length;
   const managerUsersCount = users.filter(u => u.roles && u.roles[0]?.name.toLowerCase() === 'gerente').length;
   const auxUsersCount = users.filter(u => u.roles && u.roles[0]?.name.toLowerCase() === 'auxiliar').length;
 
   const handleFormSubmit = (data: z.infer<typeof userSchema>) => {
-    const payload = { ...data };
+    const { active, ...restOfData } = data;
+    const payload = { 
+      ...restOfData,
+      active: active === 1 ? 1 : 0,
+    };
+
     if (userToEdit && !payload.password) {
       delete payload.password;
     }
 
     if (userToEdit) {
-      updateUserMutation({ id: userToEdit.id, payload });
+      updateUserMutation({ id: userToEdit.id, payload: payload as UpdateUserPayload });
     } else {
       createUserMutation(payload as CreateUserPayload);
     }
@@ -235,7 +241,7 @@ export function Usuarios() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -255,6 +261,17 @@ export function Usuarios() {
                 {isLoading ? <Skeleton className="h-8 w-16 mt-1" /> : <p className="text-3xl font-bold text-red-600">{masterUsersCount}</p>}
               </div>
               <Shield className="h-8 w-8 text-red-600" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Admins</p>
+                {isLoading ? <Skeleton className="h-8 w-16 mt-1" /> : <p className="text-3xl font-bold text-orange-400">{adminUsersCount}</p>}
+              </div>
+              <Shield className="h-8 w-8 text-orange-400" />
             </div>
           </CardContent>
         </Card>
@@ -302,6 +319,7 @@ export function Usuarios() {
                 <SelectContent>
                   <SelectItem value="all">Todos os níveis</SelectItem>
                   <SelectItem value="master">Master</SelectItem>
+                  <SelectItem value="admin">Adminstrador</SelectItem>
                   <SelectItem value="gerente">Gerente</SelectItem>
                   <SelectItem value="auxiliar">Auxiliar</SelectItem>
                 </SelectContent>
@@ -313,8 +331,8 @@ export function Usuarios() {
                 <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="ativo">Ativo</SelectItem>
-                  <SelectItem value="inativo">Inativo</SelectItem>
+                  <SelectItem value="1">Ativo</SelectItem>
+                  <SelectItem value="0">Inativo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -358,11 +376,11 @@ export function Usuarios() {
                   </TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs ${
-                      user.status === 'ativo' 
+                      user.active === 1
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-red-100 text-red-800'
                     }`}>
-                      {user.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                      {user.active === 1 ? 'Ativo' : 'Inativo'}
                     </span>
                   </TableCell>
                   <TableCell>{formatDate(new Date(user.created_at))}</TableCell>
@@ -452,11 +470,11 @@ export function Usuarios() {
         initialData={userToEdit}
         fields={[
           { name: 'name', label: 'Nome Completo', type: 'text', placeholder: 'Nome do usuário', gridCols: 2, disabled: false },
-          { name: 'email', label: 'E-mail', type: 'email', placeholder: 'usuario@empresa.com', gridCols: 2, disabled: false },
-          { name: 'login', label: 'Login', type: 'text', placeholder: 'Login de acesso', gridCols: 2, disabled: false },
+          { name: 'email', label: 'E-mail', type: 'email', placeholder: 'usuario@empresa.com', gridCols: 1, disabled: false },
+          { name: 'login', label: 'Login', type: 'text', placeholder: 'Login de acesso', gridCols: 1, disabled: false },
           { name: 'password', label: `Senha ${userToEdit ? '(deixe vazio para manter)' : ''}`, type: 'password', placeholder: 'Senha de acesso', gridCols: 2, disabled: false },
           { name: 'role', label: 'Perfil de Acesso', type: 'select', options: [{ value: 'Auxiliar', label: 'Auxiliar' }, { value: 'Gerente', label: 'Gerente' }, { value: 'Admin', label: 'Admin' }], gridCols: 1, disabled: false },
-          { name: 'status', label: 'Status', type: 'select', options: [{ value: 'ativo', label: 'Ativo' }, { value: 'inativo', label: 'Inativo' }], gridCols: 1, disabled: false },
+          { name: 'active', label: 'Status', type: 'select', options: [{ value: 1, label: 'Ativo' }, { value: 0, label: 'Inativo' }], gridCols: 1, disabled: false },
           { name: 'avatar', label: 'Avatar', type: 'file', accept: '.png,.jpg,.jpeg,.webp', placeholder: 'Selecione uma imagem ',gridCols: 2, disabled: false },
         ]}
         schema={userSchema}

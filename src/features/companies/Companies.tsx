@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { z } from 'zod';
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog'
 import { 
   AlertDialog,
    AlertDialogAction,
@@ -12,31 +12,33 @@ import {
       AlertDialogDescription,
        AlertDialogFooter,
         AlertDialogHeader,
-         AlertDialogTitle
+         AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Label } from '@/components/ui/label'
-import { Plus, Search, Edit, Trash2 } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, Loader2 } from 'lucide-react'
 import { formatCNPJ } from '@/lib/utils'
 import { toast } from 'react-toastify'
-import { getCompanies, createCompany, updateCompany, deleteCompany } from '@/lib/services/finance/company.service'
+import { getCompanies, createCompany, updateCompany, deleteCompany, NewCompanyPayload, UpdateCompanyPayload } from '@/lib/services/finance/company.service'
 import { ICompany as Company} from '@/interfaces/universal/CompanyInterface'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Skeleton } from "@/components/ui/skeleton"
+import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm'
+import { useAddressData, ICity, IState, ICountry } from '@/lib/services/universal/address_data.service';
+import { getAddressByCEP } from '@/lib/services/universal/viacep.service';
 
-const initialFormData: Omit<Company, 'id'> = {
-  corporate_name: '',
-  cnpj: '',
-  phone_number: '',
-  trade_name: '',
-  type: 'matriz',
-  address_line: '',
-  city: '',
-  complement: '',
-  state: '',
-  zipcode: '',
-  country: 'BR', 
-  email: ''
-};
+const companySchema = z.object({
+  corporate_name: z.string().min(3, 'A razão social é obrigatória.'),
+  cnpj: z.string().length(14, 'O CNPJ deve ter 14 dígitos.'),
+  trade_name: z.string().min(1, 'A abreviação é obrigatória.'),
+  email: z.string().email('Formato de e-mail inválido.').optional().nullable(),
+  phone_number: z.string().optional().nullable(),
+  zipcode: z.string().optional().nullable(),
+  address_line: z.string().optional().nullable(),
+  complement: z.string().optional().nullable(),
+  type: z.enum(['matriz', 'filial']),
+  country_id: z.coerce.number().optional().nullable(),
+  state_id: z.coerce.number().optional().nullable(),
+  city_id: z.coerce.number().optional().nullable(),
+});
 
 export function Companies() {
   const queryClient = useQueryClient();
@@ -47,7 +49,7 @@ export function Companies() {
     staleTime: 30000,
   });
 
-  const { mutate: createCompanyMutation } = useMutation({
+  const { mutate: createCompanyMutation, isPending: isCreating } = useMutation({
     mutationFn: createCompany,
     onSuccess: () => {
       toast.success("Nova empresa cadastrada com sucesso.");
@@ -59,7 +61,7 @@ export function Companies() {
     }
   });
 
-  const { mutate: updateCompanyMutation } = useMutation({
+  const { mutate: updateCompanyMutation, isPending: isUpdating } = useMutation({
     mutationFn: updateCompany,
     onSuccess: () => {
       toast.success("Dados da empresa atualizados com sucesso.");
@@ -85,7 +87,6 @@ export function Companies() {
   const [busca, setBusca] = useState('');
   const [modalAberto, setModalAberto] = useState(false);
   const [empresaEditando, setEmpresaEditando] = useState<Company | null>(null);
-  const [formData, setFormData] = useState(initialFormData);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<number | null>(null);
 
@@ -95,37 +96,21 @@ export function Companies() {
     (empresa.trade_name && empresa.trade_name.toLowerCase().includes(busca.toLowerCase()))
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (data: z.infer<typeof companySchema>) => {
     if (empresaEditando) {
-      updateCompanyMutation({ id: empresaEditando.id, payload: formData });
+      updateCompanyMutation({ id: empresaEditando.id, payload: data as UpdateCompanyPayload });
     } else {
-      createCompanyMutation(formData);
+      createCompanyMutation(data as NewCompanyPayload);
     }
   };
 
   const handleEdit = (empresa: Company) => {
     setEmpresaEditando(empresa);
-    setFormData({
-      corporate_name: empresa.corporate_name,
-      cnpj: empresa.cnpj,
-      trade_name: empresa.trade_name || '',
-      type: empresa.type,
-      phone_number: empresa.phone_number || '',
-      email: empresa.email || '',
-      address_line: empresa.address_line || '',
-      city: empresa.city || '',
-      complement: empresa.complement || '',
-      state: empresa.state || '',
-      zipcode: empresa.zipcode || '',
-      country: empresa.country || 'BR'
-    });
     setModalAberto(true);
   };
   
   const openNewModal = () => {
     setEmpresaEditando(null);
-    setFormData(initialFormData);
     setModalAberto(true);
   };
   
@@ -141,6 +126,61 @@ export function Companies() {
       setCompanyToDelete(null);
     }
   };
+
+  const { data: addressData, isLoading: isLoadingAddressData } = useAddressData();
+
+  const { mutate: searchCep, isPending: isSearchingCep, data: cepData, isSuccess: isCepSearchSuccess } = useMutation({
+    mutationFn: getAddressByCEP,
+    onSuccess: () => {
+      toast.success('Endereço preenchido automaticamente!');
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const handleCepBlur = (event: React.FocusEvent<HTMLInputElement>, setValue: Function) => {
+    const cep = event.target.value.replace(/\D/g, '');
+    if (cep.length === 8) {
+      searchCep(cep, {
+        onSuccess: (data) => {
+          const state = addressData?.states.find((s: IState) => s.uf === data.uf);
+          if (state) {
+            setValue('state_id', state.id, { shouldValidate: true });
+          }
+          setValue('address_line', data.logradouro, { shouldValidate: true });
+          setValue('complement', data.complemento, { shouldValidate: true });
+        }
+      });
+    }
+  };
+
+  const formFields = (watch: Function, setValue: Function): FormFieldConfig<any>[] => {
+    const selectedStateId = watch('state_id');
+
+    useEffect(() => {
+      if (selectedStateId && isCepSearchSuccess && cepData && addressData?.cities) {
+        const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const city = addressData.cities.find((c: ICity) => 
+          c.state_id === selectedStateId && normalize(c.name) === normalize(cepData.localidade)
+        );
+        if (city) setValue('city_id', city.id, { shouldValidate: true });
+      }
+    }, [selectedStateId, isCepSearchSuccess, cepData, addressData, setValue]);
+
+    return [
+    { name: 'corporate_name', label: 'Razão Social', type: 'text', placeholder: 'Nome completo da empresa', gridCols: 2 },
+    { name: 'cnpj', label: 'CNPJ', type: 'text', placeholder: 'Apenas números', gridCols: 1 },
+    { name: 'trade_name', label: 'Apelido', type: 'text', placeholder: 'Nome popular da empresa', gridCols: 1 },
+    { name: 'email', label: 'E-mail', type: 'email', placeholder: 'contato@empresa.com', gridCols: 1 },
+    { name: 'phone_number', label: 'Telefone', type: 'text', placeholder: '(00) 00000-0000', gridCols: 1 },
+    { name: 'zipcode', label: 'CEP', type: 'text', placeholder: '00000-000', gridCols: 1, onBlur: (e) => handleCepBlur(e, setValue), rightIcon: isSearchingCep ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined },
+    { name: 'type', label: 'Tipo', type: 'select', options: [{ value: 'matriz', label: 'Matriz' }, { value: 'filial', label: 'Filial' }], gridCols: 1 },
+    { name: 'address_line', label: 'Endereço', type: 'text', placeholder: 'Rua, Avenida, etc.', gridCols: 2 },
+    { name: 'complement', label: 'Complemento', type: 'text', placeholder: 'Apto, Bloco, etc.', gridCols: 1 },
+    { name: 'country_id', label: 'País', type: 'select', options: addressData?.countries.map((c: ICountry) => ({ value: c.id, label: c.name })), disabled: isLoadingAddressData, placeholder: 'Selecione o país', gridCols: 1 },
+    { name: 'state_id', label: 'Estado', type: 'select', options: addressData?.states.map((s: IState) => ({ value: s.id, label: s.name })), disabled: isLoadingAddressData, placeholder: 'Selecione o estado', gridCols: 1 },
+    { name: 'city_id', label: 'Cidade', type: 'select', options: addressData?.cities.filter((c: ICity) => c.state_id === selectedStateId).map((c: ICity) => ({ value: c.id, label: c.name })), disabled: !selectedStateId || isLoadingAddressData, placeholder: 'Selecione uma cidade', gridCols: 1 },
+  ];
+  }
 
   if (isLoading) {
     return (
@@ -168,78 +208,10 @@ export function Companies() {
           <p className="text-muted-foreground">Gerencie os CNPJs cadastrados no sistema</p>
         </div>
         
-        <Dialog open={modalAberto} onOpenChange={setModalAberto}>
-          <DialogTrigger asChild>
-            <Button onClick={openNewModal}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Empresa
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-2xl flex flex-col max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle>
-                {empresaEditando ? 'Editar Empresa' : 'Nova Empresa'}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="flex-grow overflow-hidden flex flex-col">
-              <div className="overflow-y-auto space-y-4 pr-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border scrollbar-thumb-rounded-md hover:scrollbar-thumb-accent"> 
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <div>
-                    <Label htmlFor="corporate_name" className='pl-1'>Razão Social</Label>
-                    <Input id="corporate_name" value={formData.corporate_name} onChange={(e) => setFormData({...formData, corporate_name: e.target.value})} required />
-                  </div>
-                  <div>
-                    <Label htmlFor="cnpj" className='pl-1'>CNPJ</Label>
-                    <Input id="cnpj" value={formData.cnpj} onChange={(e) => setFormData({...formData, cnpj: e.target.value})} placeholder="Apenas números" required />
-                  </div>
-                  <div>
-                    <Label htmlFor="trade_name" className='pl-1'>Nome Fantasia</Label>
-                    <Input id="trade_name" value={formData.trade_name || ''} onChange={(e) => setFormData({...formData, trade_name: e.target.value})} />
-                  </div>
-                  <div>
-                    <Label htmlFor="email" className='pl-1'>Email</Label>
-                    <Input id="email" type="email" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone_number" className='pl-1'>Telefone</Label>
-                    <Input id="phone_number" value={formData.phone_number || ''} onChange={(e) => setFormData({...formData, phone_number: e.target.value})} placeholder="Apenas números" />
-                  </div>
-                  <div>
-                    <Label htmlFor="zipcode" className='pl-1'>CEP</Label>
-                    <Input id="zipcode" value={formData.zipcode || ''} onChange={(e) => setFormData({...formData, zipcode: e.target.value})} />
-                  </div>
-                  <div className='md:col-span-2'>
-                    <Label htmlFor="address_line" className='pl-1'>Endereço</Label>
-                    <Input id="address_line" value={formData.address_line || ''} onChange={(e) => setFormData({...formData, address_line: e.target.value})} />
-                  </div>
-                  <div>
-                    <Label htmlFor="complement" className='pl-1'>Complemento</Label>
-                    <Input id="complement" value={formData.complement || ''} onChange={(e) => setFormData({...formData, complement: e.target.value})} />
-                  </div>
-                  <div>
-                    <Label htmlFor="city" className='pl-1'>Cidade</Label>
-                    <Input id="city" value={formData.city || ''} onChange={(e) => setFormData({...formData, city: e.target.value})} />
-                  </div>
-                  <div>
-                    <Label htmlFor="state" className='pl-1'>Estado (UF)</Label>
-                    <Input id="state" value={formData.state || ''} onChange={(e) => setFormData({...formData, state: e.target.value})} maxLength={2} />
-                  </div>
-                  <div>
-                    <Label htmlFor="type" className='pl-1'>Tipo</Label>
-                    <select id="type" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} className="w-full h-10 px-3 py-2 text-sm border border-input bg-background rounded-md">
-                      <option value="matriz">Matriz</option>
-                      <option value="filial">Filial</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              <DialogFooter className="pt-4 mt-auto">
-                <Button type="button" variant="outline" onClick={() => setModalAberto(false)}>Cancelar</Button>
-                <Button type="submit">{empresaEditando ? 'Atualizar' : 'Cadastrar'}</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={openNewModal}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Empresa
+        </Button>
       </div>
 
       <Card>
@@ -256,7 +228,7 @@ export function Companies() {
               <TableRow>
                 <TableHead>Razão Social</TableHead>
                 <TableHead>CNPJ</TableHead>
-                <TableHead>ABREVIAÇÃO</TableHead>
+                <TableHead>Abreviação</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead className='text-right'>Ações</TableHead>
               </TableRow>
@@ -267,7 +239,7 @@ export function Companies() {
                   <TableCell className="font-medium">{empresa.corporate_name}</TableCell>
                   <TableCell>{formatCNPJ(empresa.cnpj)}</TableCell>
                   <TableCell>{empresa.trade_name}</TableCell>
-                  <TableCell>{empresa.type}</TableCell>
+                  <TableCell>{empresa.type.toLocaleUpperCase()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex space-x-2 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(empresa)}><Edit className="h-4 w-4" /></Button>
@@ -280,6 +252,18 @@ export function Companies() {
           </Table>
         </CardContent>
       </Card>
+
+      <GenericForm
+        isOpen={modalAberto}
+        onOpenChange={(isOpen) => { if (!isOpen) setEmpresaEditando(null); setModalAberto(isOpen); }}
+        onSubmit={handleSubmit}
+        isLoading={isCreating || isUpdating}
+        initialData={empresaEditando || { type: 'matriz', country_id: 1 }}
+        fields={formFields}
+        schema={companySchema}
+        title={empresaEditando ? 'Editar Empresa' : 'Nova Empresa'}
+        description="Preencha as informações para gerenciar a empresa."
+      />
       
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>

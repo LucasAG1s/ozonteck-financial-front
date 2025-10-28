@@ -29,7 +29,7 @@ const contractSchema = z.object({
   sector_id: z.coerce.number().min(1, 'O setor é obrigatório.'),
   is_unionized: z.coerce.boolean(),
   work_schedule: z.string().optional().nullable(),
-  active: z.coerce.boolean().optional(),
+  active: z.coerce.boolean(),
 });
 
 interface EmployeeContractsListProps {
@@ -41,7 +41,7 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
   const contracts = employee.contracts || [];
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [contractToEdit, setContractToEdit] = useState<EmployeeContract | null>(null);
+  const [contractToEdit, setContractToEdit] = useState<Partial<EmployeeContract> & { salary?: string } | null>(null);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<number | null>(null);
   const [isSalaryHistoryModalOpen, setIsSalaryHistoryModalOpen] = useState(false);
@@ -86,20 +86,20 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
   });
 
   const handleFormSubmit = (data: z.infer<typeof contractSchema>) => {
-    if (contractToEdit) {
+    if (contractToEdit && contractToEdit.id) {
       const payload = { 
         ...data, 
-        is_unionized: data.is_unionized ? 1 : 0,
-        active: data.active ? 1 : 0,
+        is_unionized: data.is_unionized,
+        active: data.active,
         work_schedule: data.work_schedule || null,
       };
-      updateContractMutation({ id: contractToEdit.id, payload: payload as UpdateContractPayload });
+      updateContractMutation({ id: contractToEdit.id, payload: payload });
     } else {
       const payloadWithEmployeeId = { 
         ...data, 
         employee_id: employee.id, 
-        is_unionized: data.is_unionized ? 1 : 0,
-        active: data.active ? 1 : 0,
+        is_unionized: data.is_unionized,
+        active: data.active,
         work_schedule: data.work_schedule || null,
         salaries: [], 
       };
@@ -120,7 +120,7 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
       is_unionized: !!contract.is_unionized,
       active: !!contract.active,
     };
-    setContractToEdit(contractForEdit as any); 
+    setContractToEdit(contractForEdit); 
     setIsModalOpen(true);
   };
 
@@ -270,7 +270,7 @@ export function EmployeeContractsList({ employee }: EmployeeContractsListProps) 
         onOpenChange={(isOpen) => { if (!isOpen) setContractToEdit(null); setIsModalOpen(isOpen); }}
         onSubmit={handleFormSubmit}
         isLoading={isCreating || isUpdating}
-        initialData={contractToEdit || { company_id: companies[0]?.id, active: true }}
+        initialData={contractToEdit || { company_id: companies[0]?.id, active: true, is_unionized: false}}
         fields={formFields}
         schema={contractSchema}
         title={contractToEdit ? 'Editar Contrato' : 'Novo Contrato'}

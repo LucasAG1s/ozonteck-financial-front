@@ -15,12 +15,12 @@ export interface User {
   roles: Role[];
   permissions: Permission[]; 
   token:[]
-  status: 'ativo' | 'inativo'
+  active: number,
   last_access?: string
   created_at: string
 }
 
-export type CreateUserPayload = Pick<User, 'name' | 'email' | 'status'> & { login: string; role: string; password?: string; avatar?: File | null; password_confirmation?: string };
+export type CreateUserPayload = Pick<User, 'name' | 'email' | 'active'> & { login: string; role: string; password?: string; avatar?: File | null; password_confirmation?: string };
 export type UpdateUserPayload = Partial<CreateUserPayload>;
 
 function buildFormData(payload: Record<string, any>, isUpdate: boolean = false): FormData {

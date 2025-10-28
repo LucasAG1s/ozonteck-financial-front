@@ -5,12 +5,12 @@ export interface ICompany {
   cnpj: string;
   phone_number: string | null;
   trade_name: string | null;
-  type: string;
+  type: 'matriz' | 'filial';
   address_line: string | null;
-  city: string | null;
   complement: string | null;
-  state: string | null;
   zipcode: string | null;
-  country: string | null;
+  city_id: number | null;
+  state_id: number | null;
+  country_id: number | null;
   email: string | null;
 }

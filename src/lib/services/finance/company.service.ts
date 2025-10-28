@@ -30,7 +30,7 @@ export async function createCompany(companyData: NewCompanyPayload): Promise<ICo
  */
 export async function updateCompany({ id, payload }: { id: number; payload: UpdateCompanyPayload }): Promise<ICompany> {
   try {
-    const response = await api.patch<ICompany>(`/api/companies/${id}`, payload)
+    const response = await api.post<ICompany>(`/api/companies/update/${id}`, payload)
     return response.data
 
   } catch(error){

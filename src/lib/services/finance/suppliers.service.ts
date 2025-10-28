@@ -1,5 +1,5 @@
 import api, { handleApiError } from "@/lib/axios";
-import { ISupplierBank, ISupplier, ISupplierAddress, ISupplierData, ISupplierEdit } from "@/interfaces/finance/SuppliersInterface";
+import { ISupplierBank, ISupplier, ISupplierAddress, ISupplierData, ISupplierEdit, ISupplierObservation } from "@/interfaces/finance/SuppliersInterface";
 
 
 export type CreateSupplierPayload = Omit<ISupplier, 'id' | 'created_at' | 'updated_at'>;
@@ -78,5 +78,17 @@ export async function updateSupplierBank(id: number, payload: UpdateSupplierBank
     return response.data;
   }catch(error){
     throw handleApiError(error, 'Ocorreu um erro ao atualizar o banco do fornecedor.');
+  }
+}
+
+
+export type createObservationPayload = Omit<ISupplierObservation, 'id' | 'created_at' | 'updated_at' | 'operator_id'|'operator'>
+export async function createSupplierObservation(supplier_id:number,payload:createObservationPayload){
+  try{
+    const response = await api.post(`/api/supplier/observations/create/${supplier_id}`,payload)
+    return response.data
+
+  }catch(error){
+    throw handleApiError(error, 'Ocorreu um erro ao criar a observação.');
   }
 }

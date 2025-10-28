@@ -43,7 +43,7 @@ const navigation: NavItem[] = [
   { name: 'Colaboradores', href: '/employees', icon: Users },
   { name: 'Fornecedores', href: '/suppliers', icon: Truck },
   { name: 'Pagamentos', icon: CreditCard, children: [
-    { name: 'Funcionários', href: '/payments/employees', icon: Users },]
+    { name: 'Colaboradores', href: '/payments/employees', icon: Users },]
   },
   { name: 'Integrações', href: '/integracoes', icon: Building },
   { name: 'Relatórios', href: '/reports', icon: FileText },

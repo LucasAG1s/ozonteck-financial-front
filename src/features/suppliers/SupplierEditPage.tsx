@@ -9,7 +9,9 @@ import { SupplierGeneralForm } from './components/SupplierGeneralForm'
 import { SupplierDataForm } from './components/SupplierDataForm'
 import { SupplierAddressForm } from './components/SupplierAddressForm'
 import { SupplierBankForm } from './components/SupplierBankForm'
+import { SupplierObservationsList } from './components/SupplierObservationsList'
 import { SupplierExpensesList } from './components/SupplierExpensesList'
+
 
 export function SupplierEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,11 +57,12 @@ export function SupplierEditPage() {
 
       <Tabs defaultValue="general" className="w-full">
         <div className="overflow-x-auto scrollbar-hide">
-          <TabsList className="grid w-full grid-cols-[repeat(5,minmax(180px,1fr))] md:grid-cols-5">
+          <TabsList className="h-auto flex-wrap justify-start md:grid md:grid-cols-6 md:h-10 md:divide-x md:divide-gray-200 dark:md:divide-gray-700">
             <TabsTrigger value="general">Dados Gerais</TabsTrigger>
             <TabsTrigger value="data">Dados Fiscais</TabsTrigger>
             <TabsTrigger value="address">Endereço</TabsTrigger>
             <TabsTrigger value="bank">Dados Bancários</TabsTrigger>
+            <TabsTrigger value="observations">Observações</TabsTrigger>
             <TabsTrigger value="expenses">Despesas</TabsTrigger>
           </TabsList>
         </div>
@@ -75,6 +78,9 @@ export function SupplierEditPage() {
         </TabsContent>
         <TabsContent value="bank">
           <SupplierBankForm bank={supplier.bank} />
+        </TabsContent>
+        <TabsContent value="observations">
+          <SupplierObservationsList supplier={supplier} />
         </TabsContent>
         <TabsContent value="expenses">
           <SupplierExpensesList supplier={supplier} />

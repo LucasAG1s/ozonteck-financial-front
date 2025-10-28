@@ -9,7 +9,9 @@ import {
   IEmployeePayment,
   IEmployeePaymentSummary,
   ISettleAllPaymentsPayload,
-  ISettlePaymentPayload
+  ISettlePaymentPayload,
+  IEmployeeFiles,
+  IEmployeeObservations
 } from "@/interfaces/HR/EmployeeInterface";
 
 function buildFormData(payload: Record<string, any>, isUpdate: boolean = false): FormData {
@@ -26,7 +28,7 @@ function buildFormData(payload: Record<string, any>, isUpdate: boolean = false):
 }
 
 
-export type CreateEmployeePayload = Omit<IEmployee, 'description'|'id' | 'created_at' | 'updated_at'|'contracts'|'data'|'address'|'bank' | 'payments'> & { document_number?: string; avatar?: File | null };
+export type CreateEmployeePayload = Omit<IEmployee, 'id' | 'created_at' | 'updated_at' | 'contracts' | 'data' | 'address' | 'bank' | 'payments' | 'files' | 'observations' | 'description'> & { document_number?: string; avatar?: File | null };
 export type UpdateEmployeePayload = Partial<CreateEmployeePayload>;
 
 
@@ -208,5 +210,38 @@ export async function settleAllEmployeePayments(company_id:number,payload: ISett
     await api.post(`/api/employee-payment/settle-all-payments/${company_id}`, payload);
   } catch (error) {
     throw handleApiError(error, 'Ocorreu um erro ao fechar a folha de todos os colaboradores.');
+  }
+}
+
+
+export type CreateEmployeeFilePayload = Omit<IEmployeeFiles, 'id' | 'created_at' | 'updated_at'|'path'|'size'|'mime_type'>
+export async function createFile(employee_id:number,payload:CreateEmployeeFilePayload):Promise<IEmployeeFiles>{
+  try{
+    const data = buildFormData(payload);
+    const response = await api.post(`/api/employee/files/create/${employee_id}`,data,{
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+    return response.data
+  }catch(error){
+    throw handleApiError(error, 'Ocorreu um erro ao criar o arquivo.');
+  }
+}
+
+export async function deleteFile(id:number):Promise<void>{
+  try{
+    await api.delete(`/api/employee/files/delete/${id}`)
+  }catch(error){
+    throw handleApiError(error, 'Ocorreu um erro ao excluir o arquivo.');
+  }
+}
+
+type CreateEmployeeObservation = Omit<IEmployeeObservations, 'id'|'created_at'|'updated_at'|'operator_id'|'operator'>
+export async function createEmployeeObservations(employee_id:number,payload:CreateEmployeeObservation)
+{
+  try{
+    const response = await api.post(`/api/employee/observations/create/${employee_id}`,payload)
+    return response.data
+  }catch(error){
+    throw handleApiError(error, 'Ocorreu um erro ao criar a observação.');
   }
 }

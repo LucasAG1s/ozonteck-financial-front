@@ -1,3 +1,26 @@
+
+
+export interface IEmployee {
+  id: number
+  name: string
+  admission_date:string
+  phone: string
+  description:string
+  email: string
+  contracts: IEmployeeContract[]
+  data: IEmployeeData
+  address: IEmployeeAddress
+  bank: IEmployeeBank
+  payments: IEmployeePayments[] 
+  files:IEmployeeFiles[]
+  observations:IEmployeeObservations[]
+  active: boolean
+  created_at: string
+  updated_at: string
+}
+
+
+
 export interface IEmployeeData {
   id: number
   employee_id: number
@@ -60,28 +83,24 @@ export interface IEmployeeContract {
   salaries: IEmployeeSalaryHistory[]
   salary:string
   position: string | null
-  active: number
+  active: boolean
   sector_id: number
-  is_unionized: number 
+  is_unionized: boolean 
   work_schedule: string | null 
   sector: { id: number, name: string } 
 }
 
-export interface IEmployee {
-  id: number
-  name: string
-  admission_date:string
-  phone: string
-  description:string
-  email: string
-  contracts: IEmployeeContract[]
-  data: IEmployeeData
-  address: IEmployeeAddress
-  bank: IEmployeeBank
-  payments: IEmployeePayments[] 
-  active: boolean
-  created_at: string
-  updated_at: string
+
+export interface IEmployeeFiles{
+  id:number,
+  type:string,
+  name:string,
+  size:number,
+  mime_type:string,
+  path:string,
+  created_at:string,
+  updated_at:string,
+
 }
 
 export interface IEmployeePayment{
@@ -141,4 +160,16 @@ export interface ISettlePaymentPayload {
   account_plan_id: number,
   payment_method_id: number
   reference_month: string
+}
+
+export interface IEmployeeObservations{
+  id:number,
+  observation:string,
+  created_at:string,
+  updated_at:string,
+  operator_id:number, 
+  operator: { 
+    name: string;
+    login:string
+  };
 }

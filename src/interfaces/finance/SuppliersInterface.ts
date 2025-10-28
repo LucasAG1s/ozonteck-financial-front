@@ -59,4 +59,16 @@ export interface ISupplierEdit{
   address:ISupplierAddress
   bank:ISupplierBank
   expenses:any[]
+  observations:ISupplierObservation[]
+}
+
+export interface ISupplierObservation{
+  id:number
+  observation:string
+  created_at:string
+  updated_at:string
+  operator_id:number
+  operator:{
+    name:string
+  }
 }

@@ -25,6 +25,8 @@ export interface FormFieldConfig<TFieldValues extends z.AnyZodObject> {
   step?: string;
   disabled?: boolean;
   gridCols?: number;
+  onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
+  rightIcon?: React.ReactNode;
 }
 
 interface FormFieldsRendererProps<T extends z.ZodObject<any, any, any>> {
@@ -33,6 +35,7 @@ interface FormFieldsRendererProps<T extends z.ZodObject<any, any, any>> {
   register: UseFormRegister<z.infer<T>>;
   errors: FieldErrors<z.infer<T>>;
   watch: UseFormWatch<z.infer<T>>;
+  setValue: (name: Path<z.infer<T>>, value: any, config?: Object) => void;
 }
 
 export function FormFieldsRenderer<T extends z.ZodObject<any, any, any>>({
@@ -80,14 +83,17 @@ export function FormFieldsRenderer<T extends z.ZodObject<any, any, any>>({
             {...register(fieldConfig.name)}
           />
         ) : (
-          <Input
-            id={fieldConfig.name}
-            type={fieldConfig.type}
-            placeholder={fieldConfig.placeholder}
-            step={fieldConfig.type === 'number' ? fieldConfig.step : undefined}
-            accept={fieldConfig.type === 'file' ? fieldConfig.accept : undefined}
-            {...register(fieldConfig.name)}
-          />
+          <div className="relative">
+            <Input
+              id={fieldConfig.name}
+              type={fieldConfig.type}
+              placeholder={fieldConfig.placeholder}
+              step={fieldConfig.type === 'number' ? fieldConfig.step : undefined}
+              accept={fieldConfig.type === 'file' ? fieldConfig.accept : undefined}
+              {...register(fieldConfig.name, { onBlur: fieldConfig.onBlur })}
+            />
+            {fieldConfig.rightIcon && <div className="absolute inset-y-0 right-0 flex items-center pr-3">{fieldConfig.rightIcon}</div>}
+          </div>
         )}
         {error && <p className="text-sm text-destructive mt-1">{error}</p>}
         {fieldConfig.name === 'password' && passwordValue && (
