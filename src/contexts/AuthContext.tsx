@@ -28,6 +28,7 @@ export interface User {
   roles: Role[]
   avatar: string | null
   permissions: {
+    registers: boolean
     dashboard: boolean
     plans: boolean
     cashflow: boolean 
@@ -57,6 +58,7 @@ const getPermissionsByRole = (roleName: string) => {
   const rolePermissions: Record<string, User['permissions']> = {
     'master': { 
       dashboard: true,
+      registers:true,
       plans: true,
       companies: true,
       entries: true,
@@ -72,6 +74,7 @@ const getPermissionsByRole = (roleName: string) => {
     },
     'gerente': { 
       dashboard: true,
+      registers:true,
       plans: true,
       companies: true,
       entries: true,
@@ -89,6 +92,7 @@ const getPermissionsByRole = (roleName: string) => {
     'auxiliar': { 
       dashboard: true,
       plans: true,
+      registers:true,
       companies: true,
       entries: true,
       expenses: true,

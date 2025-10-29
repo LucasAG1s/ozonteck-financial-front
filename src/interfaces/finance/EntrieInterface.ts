@@ -1,5 +1,6 @@
 import { IBankAccount } from "./BankAccountInterface";
 
+
 interface IEntryCompany {
   id: number;
   corporate_name: string;

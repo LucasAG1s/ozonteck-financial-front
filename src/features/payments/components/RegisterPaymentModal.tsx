@@ -5,7 +5,7 @@ import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm'
 import { IEmployeePaymentSummary } from '@/interfaces/HR/EmployeeInterface'
 import { CreateEmployeePaymentPayload } from '@/lib/services/hr/employees.service'
 import { useCompanies } from '@/hooks/useCompanies'
-import { getBanksAccount } from '@/lib/services/finance/banks.service'
+import { getBanksAccount } from '@/lib/services/finance/banks-account.service'
 import { IBankAccount } from '@/interfaces/finance/BankAccountInterface'
 import { IPaymentMethod } from '@/interfaces/finance/PaymentMethodInterface'
 import { getPaymentMethods } from '@/lib/services/finance/payment-methods.service'
@@ -93,7 +93,7 @@ export function RegisterPaymentModal({
       name: 'bank_account_id', 
       label: 'Conta de Origem', 
       type: 'select', 
-      options: bankAccounts.map((acc: IBankAccount) => ({ value: acc.id, label: `${acc.bank_name} - ${formatBankAccount(acc.account)}` })),
+      options: bankAccounts.map((acc: IBankAccount) => ({ value: acc.id, label: `${acc.banks.name} - ${formatBankAccount(acc.account)}` })),
       placeholder: isLoadingBanks ? 'Carregando...' : 'Selecione a conta de origem',
       disabled: isLoadingBanks,
       gridCols: 1},

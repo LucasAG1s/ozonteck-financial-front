@@ -1,4 +1,3 @@
-// App.tsx
 import { Routes, Route, Outlet } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastContainer } from 'react-toastify'
@@ -11,7 +10,7 @@ import { AccountPlans } from './features/accountPlans/AccountPlans'
 import { Companies } from './features/companies/Companies'
 import { Entries } from './features/entries/Entries'
 import { Expenses } from './features/expenses/Expenses'
-import { Reports } from './features/relatorios/Relatorios'
+import { Reports } from './features/reports/Reports'
 import { Employees } from './features/employees/Employees'
 import { EmployeeEditPage } from './features/employees/EmployeeEditPage' 
 import { PaymentsEmployees } from './features/payments/PaymentsEmployees'
@@ -22,6 +21,7 @@ import { Suppliers } from './features/suppliers/Suppliers'
 import { Login } from './features/auth/Login'
 import { DRE } from './features/dre/DRE'
 import { CashFlow } from './features/cashFlow/cashFlow' 
+import { BankAccounts } from './features/registers/BankAccounts'
 import 'react-toastify/dist/ReactToastify.css'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { NotFoundPage } from './components/layout/NotFoundPage'
@@ -50,14 +50,24 @@ function App() {
                     <Dashboard />
                   </ProtectedRoute>
                 } />
-              <Route
-                path="companies"
-                element={
-                  <ProtectedRoute requiredPermission="companies">
-                    <Companies />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="registers/*"
+                  element={
+                    <ProtectedRoute requiredPermission="registers">
+                      <Outlet />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route path="banks" element={<BankAccounts />} />
+                </Route>
+                <Route
+                  path="companies"
+                  element={
+                    <ProtectedRoute requiredPermission="companies">
+                      <Companies />
+                    </ProtectedRoute>
+                  }
+                />
               <Route
                 path="account-plans"
                 element={

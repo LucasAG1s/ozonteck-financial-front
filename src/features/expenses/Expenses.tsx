@@ -16,7 +16,7 @@ import { IExpense as Expense } from '@/interfaces/finance/ExpenseInterface';
 import { getTemporaryFileUrl } from '@/lib/services/generic.service';
 import { getAccountPlans } from '@/lib/services/finance/account-plan.service';
 import { IAccountPlan } from '@/interfaces/finance/AccountPlanInterface';
-import { getBanksAccount } from '@/lib/services/finance/banks.service';
+import { getBanksAccount } from '@/lib/services/finance/banks-account.service';
 import {IBankAccount} from '@/interfaces/finance/BankAccountInterface';
 import { getSuppliers } from '@/lib/services/finance/suppliers.service';
 import { ISupplier } from '@/interfaces/finance/SuppliersInterface';
@@ -76,7 +76,7 @@ export function Expenses() {
   const { data: expenses = [], isLoading: isLoadingExpenses } = useQuery<Expense[]>({
     queryKey: ['expenses', selectedCompany?.id, startDate, endDate],
     queryFn: () => getExpenses(startDate, endDate, String(selectedCompany?.id)),
-    staleTime: 1000 * 60, // 1 minuto
+    staleTime: 1000 * 60, 
     enabled: !!selectedCompany?.id,
   });
 
@@ -264,7 +264,7 @@ export function Expenses() {
       label: 'Conta Bancária (Origem do Pagamento)',
       type: 'select',
       placeholder: 'Selecione uma conta',
-      options: bankAccounts.map(b => ({ value: b.id, label: b.bank_name + ' ( ' + formatBankAccount(b.account) + ' )' })),
+      options: bankAccounts.map(b => ({ value: b.id, label: b.banks.name + ' ( ' + formatBankAccount(b.account) + ' )' })),
       gridCols: 1,
     },
     { name: 'file', label: 'Anexo (NF, Comprovante)', type: 'file' ,accept:'.pdf,.png,.jpg,.jpeg', gridCols: 2 },
@@ -311,7 +311,7 @@ export function Expenses() {
                 <SelectContent>
                   <SelectItem value="all">Todas as contas</SelectItem>
                   {bankAccounts.map(account => (
-                    <SelectItem key={account.id} value={String(account.id)}>{account.bank_name} ({formatBankAccount(account.account)})</SelectItem>
+                    <SelectItem key={account.id} value={String(account.id)}>{account.banks.name} ({formatBankAccount(account.account)}) {account.description ? `- ${account.description}` : ''}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -364,7 +364,7 @@ export function Expenses() {
                   <TableCell className="font-medium">{expense.description}</TableCell>
                   <TableCell>{expense.supplier?.fantasy_name || 'N/A'}</TableCell>
                   <TableCell>{expense.account_plan?.name || 'N/A'}</TableCell>
-                  <TableCell className="text-center">{expense.bank?.bank_name + ' (' + formatBankAccount(expense?.bank?.account || '') + ')' || 'N/A'}</TableCell>
+                  <TableCell className="text-center">{expense.bank ? `${expense.bank.banks.name} (${formatBankAccount(expense.bank.account || '')})${expense.bank.description ? ` - ${expense.bank.description}` : ''}` : 'N/A'}</TableCell>
                   <TableCell className="text-center">{expense.payment_method?.name || 'N/A'}</TableCell>
                   <TableCell className="text-center font-medium text-red-600">{formatCurrency(Number(expense.amount))}</TableCell>
                   <TableCell className="text-center">

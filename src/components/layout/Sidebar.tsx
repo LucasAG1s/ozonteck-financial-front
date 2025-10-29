@@ -10,13 +10,15 @@ import {
   TrendingDown,
   FileText,
   Users,
+  PlusCircleIcon,
+  LandmarkIcon,
   CreditCard,
   BarChart3,
   Settings,
   X,
   Home,
   Truck,
-  ChevronDown
+  ChevronDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -34,6 +36,8 @@ type NavItem = {
 
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/', icon: Home },
+  {name:'Cadastros', icon:PlusCircleIcon, children:[
+    {name:'Conta Bancária', href:'registers/banks', icon:LandmarkIcon}]},
   { name: 'Planos de Contas', href: '/account-plans', icon: ListTree },
   { name: 'Empresas', href: '/companies', icon: Building2 },
   { name: 'Entradas', href: '/entries', icon: TrendingUp },

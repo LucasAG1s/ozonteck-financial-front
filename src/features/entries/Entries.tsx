@@ -13,7 +13,7 @@ import { toast } from 'react-toastify';
 import { getEntries, createEntry, updateEntry, UpdateEntryPayload, deleteEntry } from '@/lib/services/finance/entries.service';
 import { IEntrie as Entrie } from '@/interfaces/finance/EntrieInterface';
 import { getAccountPlans } from '@/lib/services/finance/account-plan.service';
-import { getBanksAccount } from '@/lib/services/finance/banks.service';
+import { getBanksAccount } from '@/lib/services/finance/banks-account.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCompanies } from '@/hooks/useCompanies';
@@ -185,7 +185,7 @@ export function Entries() {
       label: 'Conta Bancária',
       type: 'select',
       placeholder: 'Selecione uma conta',
-      options: bankAccounts.map(b => ({ value: b.id, label: b.bank_name + ' ( ' + formatBankAccount(b.account) + ' )' })),
+      options: bankAccounts.map(b => ({ value: b.id, label: b.banks.name + ' ( ' + formatBankAccount(b.account) + ' )' })),
       gridCols: 1,
     },
     { name: 'origin', label: 'Origem', type: 'text', placeholder: 'Ex: Cliente Y', gridCols: 2 },
@@ -224,7 +224,7 @@ export function Entries() {
                 <SelectContent>
                   <SelectItem value="all">Todas as contas</SelectItem>
                   {bankAccounts.map(account => (
-                    <SelectItem key={account.id} value={String(account.id)}>{account.bank_name} ({ formatBankAccount(account.account)})</SelectItem>
+                    <SelectItem key={account.id} value={String(account.id)}>{account.banks.name} ({formatBankAccount(account.account)}){account.description ? ` - ${account.description}` : ''}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -264,7 +264,7 @@ export function Entries() {
                   <TableCell>{formatDate(new Date(entry.entry_date))}</TableCell>
                   <TableCell className="font-medium">{entry.description}</TableCell>
                   <TableCell>{entry.account_plan?.name || 'N/A'}</TableCell>
-                  <TableCell className="text-center">{entry.bank?.bank_name + ' (' + formatBankAccount(entry?.bank?.account || '') + ')' || 'N/A'}</TableCell>
+                  <TableCell className="text-center">{entry.bank ? `${entry.bank.banks.name} (${formatBankAccount(entry.bank.account || '')})${entry.bank.description ? ` - ${entry.bank.description}` : ''}` : 'N/A'}</TableCell>
                   <TableCell className="text-center font-medium text-green-600">{formatCurrency(Number(entry.amount))}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">

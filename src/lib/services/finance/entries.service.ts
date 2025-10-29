@@ -16,6 +16,7 @@ export async function getEntries(startDate: string, endDate: string, company: st
             company_id: company
         }
     });
+    console.log(response.data)
     return response.data;
   } catch(error){
     throw handleApiError(error, 'Ocorreu um erro ao buscar as entradas.');

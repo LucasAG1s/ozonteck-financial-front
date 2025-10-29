@@ -9,7 +9,7 @@ import { IPaymentMethod } from '@/interfaces/finance/PaymentMethodInterface';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getPaymentMethods } from '@/lib/services/finance/payment-methods.service';
-import { getBanksAccount } from '@/lib/services/finance/banks.service'; 
+import { getBanksAccount } from '@/lib/services/finance/banks-account.service'; 
 import { getAccountPlans } from '@/lib/services/finance/account-plan.service';
 import { IBankAccount } from '@/interfaces/finance/BankAccountInterface';
 import { IEmployeePaymentSummary } from '@/interfaces/HR/EmployeeInterface';
@@ -162,7 +162,7 @@ export function SettlePaymentModal({
                       <FormControl><SelectTrigger id="bank-account"><SelectValue placeholder="Selecione a conta..." /></SelectTrigger></FormControl>
                       <SelectContent>
                         {bankAccounts.map((account: IBankAccount) => (
-                          <SelectItem key={account.id} value={String(account.id)}>{account.bank_name} - {formatBankAccount(account.account)}</SelectItem>
+                          <SelectItem key={account.id} value={String(account.id)}>{account.banks.name} - {formatBankAccount(account.account)}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

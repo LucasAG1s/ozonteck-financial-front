@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useCompanies } from '@/hooks/useCompanies';
 import { getCashFlow } from '@/lib/services/finance/cash-flow.service';
 import { ICashFlowData } from '@/interfaces/finance/CashFlowInterface';
-import { getBanksAccount } from '@/lib/services/finance/banks.service';
+import { getBanksAccount } from '@/lib/services/finance/banks-account.service';
 import { DateRangeFilter } from '@/components/ui/dateRangeFilter';
 import { formatCurrency, formatDate, formatBankAccount } from '@/lib/utils';
 import { TrendingUp, TrendingDown, Scale, Wallet, Filter, Info, AlertCircle } from 'lucide-react';
@@ -68,7 +68,7 @@ export function CashFlow() {
             <Select onValueChange={(value) => setBankAccountId(Number(value))} value={String(bankAccountId ?? '')} disabled={isLoadingBanks || bankAccounts.length === 0}>
               <SelectTrigger><SelectValue placeholder="Selecione uma conta" /></SelectTrigger>
               <SelectContent>
-                {bankAccounts.map(bank => <SelectItem key={bank.id} value={String(bank.id)}>{ bank.bank_name + ' - ' + formatBankAccount(bank.account)}</SelectItem>)}
+                {bankAccounts.map(bank => <SelectItem key={bank.id} value={String(bank.id)}>{ bank.banks.name + ' - ' + formatBankAccount(bank.account)}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

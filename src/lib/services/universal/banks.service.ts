@@ -1,11 +1,7 @@
 import api, { handleApiError } from "@/lib/axios";
 import { useQuery } from "@tanstack/react-query";
+import { IBank } from "@/interfaces/finance/BankAccountInterface";
 
-export interface IBank {
-  id: number;
-  name: string;
-  code: string;
-}
 
 /**
  * Fetches a list of banks from the API.
