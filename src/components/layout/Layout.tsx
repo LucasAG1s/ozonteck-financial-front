@@ -8,7 +8,7 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { GenericForm, FormFieldConfig } from '../forms/GenericForm';
 import { useAuth } from '@/hooks/useAuth';
-import { UpdateUserPayload, updateUser } from '@/lib/services/users.service';
+import { UpdateUserPayload, meUpdate } from '@/lib/services/users.service';
 
 const profileSchema = z.object({
   name: z.string().min(3, 'O nome é obrigatório.'),
@@ -35,7 +35,7 @@ export function Layout() {
   const queryClient = useQueryClient();
 
   const { mutate: updateProfileMutation, isPending: isUpdating } = useMutation({
-    mutationFn: (payload: UpdateUserPayload) => updateUser(user!.id, payload),
+    mutationFn: (payload: UpdateUserPayload) => meUpdate(payload),
     onSuccess: () => {
       toast.success("Perfil atualizado com sucesso!");
       queryClient.invalidateQueries({ queryKey: ['profile'] });

@@ -81,29 +81,31 @@ export function GenericForm<T extends z.ZodObject<any, any, any>>({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl max-h-[70%] overflow-y-auto  scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border scrollbar-thumb-rounded-md hover:scrollbar-thumb-accent">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <FormFieldsRenderer
-            fields={renderedFields}
-            control={control}
-            register={register}
-            errors={errors}
-            watch={watch}
-            setValue={setValue}
-          />
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Salvando...' : (initialData ? 'Salvar Alterações' : 'Criar')}
-            </Button>
-          </DialogFooter>
-        </form>
+        <div className=''>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <FormFieldsRenderer
+              fields={renderedFields}
+              control={control}
+              register={register}
+              errors={errors}
+              watch={watch}
+              setValue={setValue}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Salvando...' : (initialData ? 'Salvar Alterações' : 'Criar')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

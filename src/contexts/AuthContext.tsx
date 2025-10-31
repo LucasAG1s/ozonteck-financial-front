@@ -1,115 +1,87 @@
 import { createContext, useState, useEffect, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '@/lib/services/auth.service'
-import { toast } from 'react-toastify'
+import { toast } from 'react-toastify';
+import { getPermissions, Permission } from '@/lib/services/permissions.service';
+import { User } from '@/interfaces/UserInterface';
 
-interface Role {
-  id: number
-  name: string
-  guard_name: string
-  created_at: string
-  updated_at: string | null
-  pivot: {
-    model_type: string
-    model_id: number
-    role_id: number
-  }
-}
+export type ProcessedPermissions = {
+  'view-dashboard': boolean;
+  'view-users-index': boolean;
+  'view-company': boolean;
+  'create-company': boolean;
+  'update-company': boolean;
+  'delete-company': boolean;
+  'create-user': boolean;
+  'update-user-data': boolean;
+  'update-user-address': boolean;
+  'view-account-plan': boolean;
+  'view-account-plan-index': boolean;
+  'create-account-plan': boolean;
+  'update-account-plan': boolean;
+  'delete-account-plan': boolean;
+  'view-bank-account-index': boolean;
+  'view-bank-account': boolean;
+  'create-bank-account': boolean;
+  'update-bank-account': boolean;
+  'delete-bank-account': boolean;
+  'view-financial-transactions': boolean;
+  'create-financial-transaction': boolean;
+  'update-financial-transaction': boolean;
+  'view-dre': boolean;
+  'view-financial-entries': boolean;
+  'create-financial-entry': boolean;
+  'update-financial-entry': boolean;
+  'delete-financial-entry': boolean;
+  'view-financial-expenses': boolean;
+  'create-financial-expense': boolean;
+  'update-financial-expense': boolean;
+  'delete-financial-expense': boolean;
+  'view-suppliers-index': boolean;
+  'view-suppliers': boolean;
+  'create-supplier': boolean;
+  'edit-supplier': boolean;
+  'update-supplier-basic-data': boolean;
+  'delete-supplier': boolean;
+  'update-supplier-data': boolean;
+  'update-supplier-address': boolean;
+  'update-supplier-bank': boolean;
+  'view-employees-index': boolean;
+  'create-employee': boolean;
+  'delete-employee': boolean;
+  'edit-employee': boolean;
+  'view-employee-payments': boolean;
+};
 
-export interface User {
-  id: number
-  login: string
-  name: string
-  status: number
-  email: string
-  email_verified_at: string
-  created_at: string
-  updated_at: string
-  roles: Role[]
-  avatar: string | null
-  permissions: {
-    registers: boolean
-    dashboard: boolean
-    plans: boolean
-    cashflow: boolean 
-    companies: boolean
-    entries: boolean
-    expenses: boolean
-    reports: boolean
-    employees: boolean
-    dre:boolean
-    payments: boolean
-    integracoes: boolean
-    usuarios: boolean
-    suppliers: boolean
-  }
-}
+
+type AuthenticatedUser = Omit<User, 'permissions'> & {
+  permissions: ProcessedPermissions;
+};
 
 interface AuthContextType {
-  user: User | null
+  user: AuthenticatedUser | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (email: string, password: string) => Promise<boolean>
+  login: (login: string, password: string) => Promise<boolean>
   logout: () => Promise<void>
-  hasPermission: (permission: keyof User['permissions']) => boolean
+  hasPermission: (permission: keyof ProcessedPermissions) => boolean
 }
 
-const getPermissionsByRole = (roleName: string) => {
-  const rolePermissions: Record<string, User['permissions']> = {
-    'master': { 
-      dashboard: true,
-      registers:true,
-      plans: true,
-      companies: true,
-      entries: true,
-      expenses: true,
-      reports: true,
-      employees: true,
-      cashflow: true, 
-      payments: true,
-      integracoes: true,
-      usuarios: true,
-      suppliers: true,
-      dre:true
-    },
-    'gerente': { 
-      dashboard: true,
-      registers:true,
-      plans: true,
-      companies: true,
-      entries: true,
-      expenses: true,
-      reports: true,
-      employees: true,
-      cashflow: true, 
-      payments: true,
-      integracoes: true,
-      usuarios: true,
-      suppliers: true,
-      dre:true
+/**
+ * @param allPermissions 
+ * @param userPermissions 
+ * @returns 
+ */
+const buildPermissionsObject = (allPermissions: Permission[], userPermissions: Permission[]): ProcessedPermissions => {
+  const userPermissionNames = new Set(userPermissions.map(p => p.name));
+  
+  const permissionsObject = allPermissions.reduce((acc, permission) => {
+    acc[permission.name as keyof ProcessedPermissions] = userPermissionNames.has(permission.name);
+    return acc;
+  }, {} as ProcessedPermissions);
 
-    },
-    'auxiliar': { 
-      dashboard: true,
-      plans: true,
-      registers:true,
-      companies: true,
-      entries: true,
-      expenses: true,
-      reports: true,
-      employees: true,
-      cashflow: true, 
-      payments: true,
-      integracoes: true,
-      usuarios: true,
-      suppliers: true,
-      dre:true
-
-    }
-  }
-  const normalizedRoleName = roleName.toLowerCase(); 
-  return rolePermissions[normalizedRoleName] || rolePermissions['auxiliar'];
-}
+  return permissionsObject;
+};
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
@@ -118,7 +90,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<AuthenticatedUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const navigate = useNavigate()
 
@@ -130,11 +102,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         if (isAuthenticated === 'true' && token) {
           try {
-            const userProfile = await authService.getProfile()
-            const roleName = (userProfile.roles && userProfile.roles.length > 0) ? userProfile.roles[0].name : 'auxiliar';
-            const permissions = getPermissionsByRole(roleName);
+            const [userProfile, allPermissions] = await Promise.all([
+              authService.getProfile(),
+              getPermissions()
+            ]);
             
-            const userData: User = {
+            const permissions = buildPermissionsObject(allPermissions, userProfile.permissions);
+            const userData: AuthenticatedUser = {
               ...userProfile,
               permissions
             }
@@ -166,18 +140,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuthStatus()
   }, [])
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (login: string, password: string): Promise<boolean> => {
     setIsLoading(true)
     
     try {
-      const { token } = await authService.login({ email, password })
+      const { token } = await authService.login({ login, password })
       
-      const userProfile = await authService.getProfile()
+      const [userProfile, allPermissions] = await Promise.all([
+        authService.getProfile(),
+        getPermissions()
+      ]);
+
+      const permissions = buildPermissionsObject(allPermissions, userProfile.permissions);
       
-      const roleName = (userProfile.roles && userProfile.roles.length > 0) ? userProfile.roles[0].name : 'auxiliar';
-      const permissions = getPermissionsByRole(roleName);
-      
-      const userData: User = {
+      const userData: AuthenticatedUser = {
         ...userProfile,
         permissions
       }
@@ -221,7 +197,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  const hasPermission = (permission: keyof User['permissions']): boolean => {
+  const hasPermission = (permission: keyof ProcessedPermissions): boolean => {
     return user?.permissions[permission] ?? false
   }
 

@@ -38,7 +38,7 @@ export function Suppliers() {
   const { data: suppliers = [], isLoading } = useQuery({
     queryKey: ['suppliers'],
     queryFn: getSuppliers,
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: 1000 * 60 * 5,
   });
 
   const { mutate: createSupplierMutation, isPending: isCreating } = useMutation({
@@ -150,7 +150,7 @@ export function Suppliers() {
             <div>
               <Label htmlFor="search">Buscar</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input id="search" placeholder="Nome ou Documento..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
               </div>
             </div>

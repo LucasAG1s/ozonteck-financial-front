@@ -1,14 +1,14 @@
-interface ITransaction {
-  date: string;
+export interface ITransaction {
+  id:number
+  transaction_date: string;
   description: string;
   type: 'credit' | 'debit'
-  type_label: 'Entrada' | 'Saída'
   amount: number
   balance_previous:number
   balance_later:number
 }
 
-export interface ICashFlowData {
+export interface ITransactionsData {
   initial_balance: string;
   final_balance: string;
   total_entries: string;

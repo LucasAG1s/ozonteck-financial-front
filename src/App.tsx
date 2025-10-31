@@ -20,7 +20,7 @@ import { Usuarios } from './features/users/Users'
 import { Suppliers } from './features/suppliers/Suppliers'
 import { Login } from './features/auth/Login'
 import { DRE } from './features/dre/DRE'
-import { CashFlow } from './features/cashFlow/cashFlow' 
+import { Transactions } from './features/transactions/Transactions' 
 import { BankAccounts } from './features/registers/BankAccounts'
 import 'react-toastify/dist/ReactToastify.css'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -46,14 +46,14 @@ function App() {
               <Route
                 index
                 element={
-                  <ProtectedRoute requiredPermission="dashboard">
+                  <ProtectedRoute requiredPermission="view-dashboard">
                     <Dashboard />
                   </ProtectedRoute>
                 } />
                 <Route
                   path="registers/*"
                   element={
-                    <ProtectedRoute requiredPermission="registers">
+                    <ProtectedRoute>
                       <Outlet />
                     </ProtectedRoute>
                   }
@@ -63,7 +63,7 @@ function App() {
                 <Route
                   path="companies"
                   element={
-                    <ProtectedRoute requiredPermission="companies">
+                    <ProtectedRoute requiredPermission="view-company">
                       <Companies />
                     </ProtectedRoute>
                   }
@@ -71,7 +71,7 @@ function App() {
               <Route
                 path="account-plans"
                 element={
-                  <ProtectedRoute requiredPermission="plans">
+                  <ProtectedRoute requiredPermission="view-account-plan-index">
                     <AccountPlans />
                   </ProtectedRoute>
                 }
@@ -79,7 +79,7 @@ function App() {
               <Route
                 path="entries"
                 element={
-                  <ProtectedRoute requiredPermission="entries">
+                  <ProtectedRoute requiredPermission="view-financial-entries">
                     <Entries />
                   </ProtectedRoute>
                 }
@@ -87,23 +87,23 @@ function App() {
               <Route
                 path="expenses"
                 element={
-                  <ProtectedRoute requiredPermission="expenses">
+                  <ProtectedRoute requiredPermission="view-financial-expenses">
                     <Expenses />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="cash-flow"
+                path="transactions"
                 element={
-                  <ProtectedRoute requiredPermission="cashflow">
-                    <CashFlow />
+                  <ProtectedRoute requiredPermission="view-financial-transactions">
+                    <Transactions />
                   </ProtectedRoute>
                 }
               />
               <Route
                 path="dre"
                 element={
-                  <ProtectedRoute requiredPermission="dre">
+                  <ProtectedRoute requiredPermission="view-dre">
                     <DRE />
                   </ProtectedRoute>
                 }
@@ -111,7 +111,7 @@ function App() {
               <Route
                 path="reports"
                 element={
-                  <ProtectedRoute requiredPermission="reports">
+                  <ProtectedRoute>
                     <Reports />
                   </ProtectedRoute>
                 }
@@ -119,7 +119,7 @@ function App() {
               <Route
                 path="employees/*"
                 element={
-                  <ProtectedRoute requiredPermission="employees">
+                  <ProtectedRoute requiredPermission="view-employees-index">
                     <Outlet />
                   </ProtectedRoute>
                 }
@@ -128,7 +128,7 @@ function App() {
                 <Route path="edit/:id" element={<EmployeeEditPage />} />
               </Route>
               <Route path="suppliers/*" element={
-                  <ProtectedRoute requiredPermission="suppliers">
+                  <ProtectedRoute requiredPermission="view-suppliers-index">
                     <Outlet />
                   </ProtectedRoute>
                 }
@@ -139,7 +139,7 @@ function App() {
               <Route
                 path="payments/*"
                 element={
-                  <ProtectedRoute requiredPermission="payments">
+                  <ProtectedRoute requiredPermission="view-employee-payments">
                     <Outlet />
                   </ProtectedRoute>
                 }
@@ -149,7 +149,7 @@ function App() {
               <Route
                 path="integracoes"
                 element={
-                  <ProtectedRoute requiredPermission="integracoes">
+                  <ProtectedRoute>
                     <Integracoes />
                   </ProtectedRoute>
                 }
@@ -157,12 +157,12 @@ function App() {
               <Route
                 path="usuarios"
                 element={
-                  <ProtectedRoute requiredPermission="usuarios">
+                  <ProtectedRoute requiredPermission='view-users-index'>
                     <Usuarios />
                   </ProtectedRoute>
                 }
               />
-            </Route> {/* Fim da rota PAI que contém o Layout */}
+            </Route> 
             <Route path="*" element={<NotFoundPage />} />
             
           </Routes>

@@ -76,7 +76,8 @@ export function Expenses() {
   const { data: expenses = [], isLoading: isLoadingExpenses } = useQuery<Expense[]>({
     queryKey: ['expenses', selectedCompany?.id, startDate, endDate],
     queryFn: () => getExpenses(startDate, endDate, String(selectedCompany?.id)),
-    staleTime: 1000 * 60, 
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: true, 
     enabled: !!selectedCompany?.id,
   });
 

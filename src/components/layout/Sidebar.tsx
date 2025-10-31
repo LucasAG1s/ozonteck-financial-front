@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+import { ProcessedPermissions } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import {
   Building2,
@@ -31,27 +33,29 @@ type NavItem = {
   name: string;
   href?: string;
   icon: React.ElementType;
+  permission?: keyof ProcessedPermissions;
   children?: Omit<NavItem, 'children'>[];
 }
 
 const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/', icon: Home },
-  {name:'Cadastros', icon:PlusCircleIcon, children:[
-    {name:'Conta Bancária', href:'registers/banks', icon:LandmarkIcon}]},
-  { name: 'Planos de Contas', href: '/account-plans', icon: ListTree },
-  { name: 'Empresas', href: '/companies', icon: Building2 },
-  { name: 'Entradas', href: '/entries', icon: TrendingUp },
-  { name: 'Saídas', href: '/expenses', icon: TrendingDown },
-  { name: 'Fluxo de Caixa', href: '/cash-flow', icon: Wallet },
-  { name: 'DRE Gerencial', href: '/dre', icon: BarChart3 },
-  { name: 'Colaboradores', href: '/employees', icon: Users },
-  { name: 'Fornecedores', href: '/suppliers', icon: Truck },
-  { name: 'Pagamentos', icon: CreditCard, children: [
-    { name: 'Colaboradores', href: '/payments/employees', icon: Users },]
+  { name: 'Dashboard', href: '/', icon: Home, permission: 'view-dashboard' },
+  { name: 'Cadastros', icon: PlusCircleIcon, children:[
+    { name: 'Conta Bancária', href: 'registers/banks', icon: LandmarkIcon, permission: 'view-bank-account-index' }
+  ]},
+  { name: 'Planos de Contas', href: '/account-plans', icon: ListTree, permission: 'view-account-plan-index' },
+  { name: 'Empresas', href: '/companies', icon: Building2, permission: 'view-company' },
+  { name: 'Entradas', href: '/entries', icon: TrendingUp, permission: 'view-financial-entries' },
+  { name: 'Saídas', href: '/expenses', icon: TrendingDown, permission: 'view-financial-expenses' },
+  { name: 'Transações', href: '/transactions', icon: Wallet, permission: 'view-financial-transactions' },
+  { name: 'DRE Gerencial', href: '/dre', icon: BarChart3, permission: 'view-dre' },
+  { name: 'Colaboradores', href: '/employees', icon: Users, permission: 'view-employees-index' },
+  { name: 'Fornecedores', href: '/suppliers', icon: Truck, permission: 'view-suppliers-index' },
+  { name: 'Pagamentos', icon: CreditCard, permission: 'view-employee-payments', children: [
+    { name: 'Colaboradores', href: '/payments/employees', icon: Users, permission: 'view-employee-payments' },]
   },
-  { name: 'Integrações', href: '/integracoes', icon: Building },
-  { name: 'Relatórios', href: '/reports', icon: FileText },
-  { name: 'Usuários', href: '/usuarios', icon: Settings },
+  { name: 'Integrações', href: '/integracoes', icon: Building, permission: 'view-dashboard' }, 
+  { name: 'Relatórios', href: '/reports', icon: FileText, permission: 'view-dashboard' }, 
+  { name: 'Usuários', href: '/usuarios', icon: Settings, permission: 'view-users-index' }, 
 ]
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
@@ -60,6 +64,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const activeSubmenu = navigation.find(item => item.children?.some(child => location.pathname.startsWith(child.href!)));
     return activeSubmenu ? { [activeSubmenu.name]: true } : {};
   });
+  const { hasPermission } = useAuth();
 
   const handleSubmenuToggle = (name: string) => {
     setOpenSubmenus(prev => ({ ...prev, [name]: !prev[name] }));
@@ -92,10 +97,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         
         <nav className="mt-6">
           <div className="px-3">
-            {navigation.map((item) => {
+            {navigation.filter(item => !item.permission || hasPermission(item.permission)).map((item) => {
               if (item.children) {
-                const isSubmenuActive = item.children.some(child => location.pathname.startsWith(child.href!));
+                const visibleChildren = item.children.filter(child => !child.permission || hasPermission(child.permission));
+                if (visibleChildren.length === 0) return null;
+
+                const isSubmenuActive = visibleChildren.some(child => location.pathname.startsWith(child.href!));
                 const isSubmenuOpen = openSubmenus[item.name];
+
                 return (
                   <div key={item.name} className="mb-1">
                     <button
@@ -115,7 +124,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     </button>
                     {isSubmenuOpen && (
                       <div className="mt-1 pl-6 space-y-1">
-                        {item.children.map(child => {
+                        {visibleChildren.map(child => {
                           const isChildActive = location.pathname === child.href;
                           return (
                             <Link

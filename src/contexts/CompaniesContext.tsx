@@ -1,4 +1,3 @@
-// src/contexts/CompaniesContext.tsx
 import { createContext, useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getCompanies } from "@/lib/services/finance/company.service"
@@ -26,7 +25,7 @@ export function CompaniesProvider({ children }: { children: React.ReactNode }) {
     queryKey: ['companies'],
     queryFn: getCompanies,
     staleTime: 1000 * 60 * 15, 
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   });
 
   useEffect(() => {

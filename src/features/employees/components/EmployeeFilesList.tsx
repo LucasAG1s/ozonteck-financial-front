@@ -165,7 +165,7 @@ export function EmployeeFilesList({ employee }: EmployeeFilesListProps) {
             Object.entries(groupedFiles).map(([type, files]) => (
               <div key={type}>
                 <h3 className="text-lg font-semibold mb-3 capitalize">{ type == 'documents' ? 'Documentos' : type == 'certificates' ? 'Certificados' : 'Outros'}</h3>
-                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border scrollbar-thumb-rounded-md">
+                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-custom">
                   {files.map(file => (
                     <FilePreviewCard
                       key={file.id}

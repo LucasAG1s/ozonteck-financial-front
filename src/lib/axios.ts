@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosError } from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://financial.ozonteck.cloud/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://financial.ozonteck.cloud';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -38,6 +38,10 @@ export const handleApiError = (error: unknown, defaultMessage: string): never =>
                 }
                 
                 throw new Error(data.message || defaultMessage);
+            }
+
+            if(status === 403){
+              throw new Error('Você não tem permissão para acessar este recurso.')
             }
 
 

@@ -78,8 +78,8 @@ export function Header({ onMenuClick, onProfileEditClick }: HeaderProps) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={(e) => {
-                  e.preventDefault(); // Impede o fechamento automático do menu
-                  onProfileEditClick(); // Chama a função para abrir o modal
+                  e.preventDefault(); 
+                  onProfileEditClick(); 
                 }}
               >
                 <Edit className="mr-2 h-4 w-4" /><span>Editar Perfil</span>

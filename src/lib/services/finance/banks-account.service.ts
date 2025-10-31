@@ -16,7 +16,7 @@ export async function getBanks(): Promise<IBank[]> {
 export async function getBanksAccount(company:number): Promise<IBankAccount[]>
 {
     try{
-        const response = await api.get<IBankAccount[]>(`/api/bank-account/`,{
+        const response = await api.get<IBankAccount[]>(`/api/bank-account`,{
             params:{
                 company_id:company
             }

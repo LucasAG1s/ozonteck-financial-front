@@ -1,20 +1,36 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { useCompanies } from '@/hooks/useCompanies';
-import { getCashFlow } from '@/lib/services/finance/cash-flow.service';
-import { ICashFlowData } from '@/interfaces/finance/CashFlowInterface';
+import { getTransactions, createTransaction, deleteTransaction, CreateTransactionPayload } from '@/lib/services/finance/transactions.service';
+import { ITransactionsData} from '@/interfaces/finance/TransactionInterface';
 import { getBanksAccount } from '@/lib/services/finance/banks-account.service';
 import { DateRangeFilter } from '@/components/ui/dateRangeFilter';
 import { formatCurrency, formatDate, formatBankAccount } from '@/lib/utils';
-import { TrendingUp, TrendingDown, Scale, Wallet, Filter, Info, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Scale, Wallet, Filter, Info, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { GenericForm, FormFieldConfig } from '@/components/forms/GenericForm';
+import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog';
+import { toast } from 'react-toastify';
 
-export function CashFlow() {
+const transactionSchema = z.object({
+  description: z.string().min(3, 'A descrição é obrigatória.'),
+  amount: z.coerce.number().positive('O valor deve ser positivo.'),
+  transaction_date: z.string().min(1, 'A data é obrigatória.'),
+  type: z.enum(['credit', 'debit'], { required_error: 'O tipo é obrigatório.' }),
+  bank_account_id: z.coerce.number().min(1, 'A conta bancária é obrigatória.'),
+});
+
+type TransactionFormData = z.infer<typeof transactionSchema>;
+
+export function Transactions() {
+  const queryClient = useQueryClient();
   const { selectedCompany } = useCompanies();
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -32,12 +48,13 @@ export function CashFlow() {
     }
   }, [bankAccounts]);
 
-  const { data, isLoading, isError, error } = useQuery<ICashFlowData>({
-    queryKey: ['cashFlow', selectedCompany?.id, startDate, endDate, bankAccountId],
-    queryFn: () => getCashFlow(startDate, endDate, selectedCompany!.id, bankAccountId),
+  const { data, isLoading, isError, error } = useQuery<ITransactionsData>({
+    queryKey: ['transactions', startDate, endDate, bankAccountId],
+    queryFn: () => getTransactions(startDate, endDate, selectedCompany!.id, bankAccountId),
     enabled: !!selectedCompany?.id && !!bankAccountId, 
     staleTime: 1000 * 60,
   });
+
 
   const transactionsWithBalance = useMemo(() => {
     if (!data) return [];
@@ -50,11 +67,63 @@ export function CashFlow() {
     });
   }, [data]);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<number | null>(null);
+
+  const { mutate: createTransactionMutation, isPending: isCreating } = useMutation({
+    mutationFn: createTransaction,
+    onSuccess: () => {
+      toast.success("Transação criada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['transactions']});
+      setIsModalOpen(false);
+    },
+    onError: (error: Error) => toast.error(`Erro ao criar transação: ${error.message}`),
+  });
+
+  const { mutate: deleteTransactionMutation, isPending: isDeleting } = useMutation({
+    mutationFn: deleteTransaction,
+    onSuccess: () => {
+      toast.success("Transação excluída com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ['transactions']});
+      setIsAlertOpen(false);
+    },
+    onError: (error: Error) => toast.error(`Erro ao excluir transação: ${error.message}`),
+  });
+
+  const handleFormSubmit = (formData: TransactionFormData) => {
+    const payload: CreateTransactionPayload = {
+      ...formData
+    };
+    createTransactionMutation(payload);
+  };
+
+  const handleDeleteClick = (id: number) => {
+    setTransactionToDelete(id);
+    setIsAlertOpen(true); 
+  };
+
+  const formFields: FormFieldConfig<typeof transactionSchema>[] = [
+    { name: 'description', label: 'Descrição', type: 'text', placeholder: 'Ex: Recebimento de cliente', gridCols: 2 },
+    { name: 'amount', label: 'Valor', type: 'number', placeholder: '0,00', step: '0.01', gridCols: 1 },
+    { name: 'transaction_date', label: 'Data da Transação', type: 'datetime-local', gridCols: 1 },
+    { name: 'type', label: 'Tipo', type: 'select', options: [{ value: 'credit', label: 'Entrada (Crédito)' }, { value: 'debit', label: 'Saída (Débito)' }], gridCols: 1 },
+    { name: 'bank_account_id', label: 'Conta Bancária', type: 'select', options: bankAccounts.map(b => ({ value: b.id, label: `${b.banks.name} - ${formatBankAccount(b.account)}` })), placeholder: 'Selecione uma conta', gridCols: 1 },
+  ];
+
   const isComponentLoading = isLoading || isLoadingBanks;
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">Fluxo de Caixa</h1>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Transações</h1>
+          <p className="text-muted-foreground">Visualize e gerencie as movimentações de suas contas.</p>
+        </div>
+        <Button onClick={() => setIsModalOpen(true)} disabled={!selectedCompany}>
+          <Plus className="h-4 w-4 mr-2" /> Nova Transação
+        </Button>
+      </div>
 
       <Card>
         <CardHeader><CardTitle className="flex items-center"><Filter className="h-5 w-5 mr-2" /> Filtros</CardTitle></CardHeader>
@@ -97,25 +166,55 @@ export function CashFlow() {
                 <TableHead className="text-right">Saldo Anterior</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead className="text-right">Saldo Posterior</TableHead>
+                <TableHead className="text-right w-[50px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isComponentLoading && Array.from({ length: 5 }).map((_, i) => <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell></TableRow>)}
               {isError && <TableRow><TableCell colSpan={5} className="text-center text-destructive py-4"><AlertCircle className="inline h-5 w-5 mr-2" />{error.message}</TableCell></TableRow>}
               {!isComponentLoading && !isError && transactionsWithBalance.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-4"><Info className="inline h-5 w-5 mr-2" />Nenhuma transação encontrada para o período.</TableCell></TableRow>}
-              {transactionsWithBalance.map((transaction, index) => (
-                <TableRow key={index}>
-                  <TableCell>{formatDate(new Date(transaction.date))}</TableCell>
+              {transactionsWithBalance.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell>{formatDate(new Date(transaction.transaction_date))}</TableCell>
                   <TableCell className="font-medium">{transaction.description}</TableCell>
                   <TableCell className={`text-right ${transaction.type ==='credit' ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(transaction.balance_previous)}</TableCell>
                   <TableCell className={`text-right ${transaction.type ==='credit' ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(transaction.amount)}</TableCell>
                   <TableCell className={`text-right ${transaction.type ==='credit' ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(transaction.balance_later)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(transaction.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      <GenericForm
+        isOpen={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onSubmit={handleFormSubmit}
+        isLoading={isCreating}
+        initialData={{ 
+          transaction_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+          bank_account_id: bankAccountId || undefined
+        }}
+        fields={formFields}
+        schema={transactionSchema}
+        title="Nova Transação Manual"
+        description="Registre uma nova entrada ou saída em sua conta."
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={isAlertOpen}
+        onOpenChange={setIsAlertOpen}
+        onConfirm={() => transactionToDelete && deleteTransactionMutation(transactionToDelete)}
+        isDeleting={isDeleting}
+        title="Excluir Transação?"
+        description="Essa ação não pode ser desfeita. A transação será removida permanentemente."
+      />
     </div>
   );
 }

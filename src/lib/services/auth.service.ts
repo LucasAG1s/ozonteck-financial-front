@@ -1,40 +1,15 @@
 import { z } from 'zod';
 import api from '../axios';
 import axios, { AxiosError } from 'axios';
-
+import { User } from '@/interfaces/UserInterface';
 
 export const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
+  login: z.string().min(1, 'O login é obrigatório.'),
   password: z.string().min(1, 'Senha é obrigatória'),
 });
 
 export type LoginData = z.infer<typeof loginSchema>;
 
-export interface Role {
-  id: number;
-  name: string;
-  guard_name: string;
-  created_at: string;
-  updated_at: string | null;
-  pivot: {
-    model_type: string;
-    model_id: number;
-    role_id: number;
-  };
-}
-
-export interface User {
-  id: number;
-  login: string;
-  name: string;
-  status: number;
-  email: string;
-  email_verified_at: string;
-  created_at: string;
-  updated_at: string;
-  roles: Role[];
-  avatar:string | null;
-}
 
 export interface AuthResponse {
   token: string;

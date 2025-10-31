@@ -13,10 +13,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { GenericForm } from '@/components/forms/GenericForm'
 import { DeleteConfirmationDialog } from '@/components/ui/DeleteConfirmationDialog'
 import { AvatarWithTemporaryUrl } from '@/components/ui/AvatarWithTemporaryUrl'
-import { User, getUsers, createUser, updateUser, deleteUser, CreateUserPayload, UpdateUserPayload, syncUserPermissions } from '@/lib/services/users.service'
+import { getUsers, createUser, updateUser, deleteUser, CreateUserPayload, UpdateUserPayload, syncUserPermissions } from '@/lib/services/users.service'
 import { Permission, getPermissions } from '@/lib/services/permissions.service'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'react-toastify'
+import { User } from '@/interfaces/UserInterface'
 
 const userSchema = z.object({
   name: z.string().min(3, 'O nome é obrigatório.'),
@@ -34,7 +35,7 @@ const userSchema = z.object({
     { message: "A senha deve ter no mínimo 8 caracteres, com maiúsculas, minúsculas e números." }
   ),
   role: z.string().min(1, "O perfil é obrigatório."), 
-  active: z.number().min(0,"O status é obrigatório.").max(1,'O status deve ser Ativo ou Inativo'),
+  active: z.coerce.number().min(0,"O status é obrigatório.").max(1,'O status deve ser Ativo ou Inativo'),
   avatar: z.any()
     .transform((value) => {
       if (value instanceof FileList) return value[0] || null;
@@ -47,8 +48,7 @@ const userSchema = z.object({
     .refine(
       (file) => !(file instanceof File) || ['image/jpeg', 'image/png', 'image/webp'].includes(file.type),
       "Formato de arquivo inválido. Use JPG, PNG ou WebP."
-    )
-    .optional().nullable(),
+    ).optional().nullable(),
 });
 
 export function Usuarios() {
@@ -133,11 +133,12 @@ export function Usuarios() {
   const auxUsersCount = users.filter(u => u.roles && u.roles[0]?.name.toLowerCase() === 'auxiliar').length;
 
   const handleFormSubmit = (data: z.infer<typeof userSchema>) => {
-    const { active, ...restOfData } = data;
-    const payload = { 
-      ...restOfData,
-      active: active === 1 ? 1 : 0,
-    };
+    const payload = { ...data };
+
+
+    if (payload.avatar === undefined) {
+      payload.avatar = null;
+    }
 
     if (userToEdit && !payload.password) {
       delete payload.password;
@@ -153,7 +154,7 @@ export function Usuarios() {
   const handleEditClick = (user: User) => {
     const userWithRoleName = {
       ...user,
-      role: user.roles[0]?.name|| 'auxiliar'
+      role: user.roles[0]?.name.toLowerCase() || 'auxiliar'
     };
     setUserToEdit(userWithRoleName as any);
     setIsModalOpen(true);
@@ -177,7 +178,7 @@ export function Usuarios() {
 
   const handleManagePermissionsClick = (user: User) => {
     setUserToManagePermissions(user);
-    const currentUserPermissionIds = new Set(user.permissions.map(p => p.id));
+    const currentUserPermissionIds = new Set(user.permissions.map((p: Permission) => p.id));
     setSelectedPermissions(currentUserPermissionIds);
     setModalPermissoesAberto(true)
   }
@@ -420,7 +421,7 @@ export function Usuarios() {
       </Card>
 
       <Dialog open={modalPermissoesAberto} onOpenChange={setModalPermissoesAberto}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[80%] overflow-y-auto  scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border scrollbar-thumb-rounded-md hover:scrollbar-thumb-accent">
           <DialogHeader>
             <DialogTitle>
               Permissões - {userToManagePermissions?.name}
@@ -473,7 +474,7 @@ export function Usuarios() {
           { name: 'email', label: 'E-mail', type: 'email', placeholder: 'usuario@empresa.com', gridCols: 1, disabled: false },
           { name: 'login', label: 'Login', type: 'text', placeholder: 'Login de acesso', gridCols: 1, disabled: false },
           { name: 'password', label: `Senha ${userToEdit ? '(deixe vazio para manter)' : ''}`, type: 'password', placeholder: 'Senha de acesso', gridCols: 2, disabled: false },
-          { name: 'role', label: 'Perfil de Acesso', type: 'select', options: [{ value: 'Auxiliar', label: 'Auxiliar' }, { value: 'Gerente', label: 'Gerente' }, { value: 'Admin', label: 'Admin' }], gridCols: 1, disabled: false },
+          { name: 'role', label: 'Perfil de Acesso', type: 'select', options: [{ value: 'auxiliar', label: 'Auxiliar' }, { value: 'gerente', label: 'Gerente' }, { value: 'admin', label: 'Admin' }], gridCols: 1, disabled: false },
           { name: 'active', label: 'Status', type: 'select', options: [{ value: 1, label: 'Ativo' }, { value: 0, label: 'Inativo' }], gridCols: 1, disabled: false },
           { name: 'avatar', label: 'Avatar', type: 'file', accept: '.png,.jpg,.jpeg,.webp', placeholder: 'Selecione uma imagem ',gridCols: 2, disabled: false },
         ]}

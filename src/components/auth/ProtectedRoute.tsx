@@ -2,10 +2,11 @@ import { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Loader2 } from 'lucide-react'
+import { ProcessedPermissions } from '@/contexts/AuthContext'
 
 interface ProtectedRouteProps {
   children: ReactNode
-  requiredPermission?: keyof import('@/contexts/AuthContext').User['permissions']
+  requiredPermission?: keyof ProcessedPermissions
 }
 
 export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteProps) {

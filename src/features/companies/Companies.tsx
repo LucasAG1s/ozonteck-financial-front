@@ -159,6 +159,8 @@ export function Companies() {
     useEffect(() => {
       if (selectedStateId && isCepSearchSuccess && cepData && addressData?.cities) {
         const normalize = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        const state = addressData.states.find((s: IState) => s.id === selectedStateId);
+        if (state) setValue('state_id', state.id, { shouldValidate: true });
         const city = addressData.cities.find((c: ICity) => 
           c.state_id === selectedStateId && normalize(c.name) === normalize(cepData.localidade)
         );

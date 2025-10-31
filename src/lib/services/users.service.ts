@@ -1,24 +1,5 @@
 import api, { handleApiError } from "@/lib/axios";
-import { Permission } from "./permissions.service";
-
-interface Role {
-  id: number;
-  name: string;
-  guard_name: string;
-}
-
-export interface User {
-  id: number
-  name: string
-  email: string
-  avatar: string | null;
-  roles: Role[];
-  permissions: Permission[]; 
-  token:[]
-  active: number,
-  last_access?: string
-  created_at: string
-}
+import { User } from "@/interfaces/UserInterface";
 
 export type CreateUserPayload = Pick<User, 'name' | 'email' | 'active'> & { login: string; role: string; password?: string; avatar?: File | null; password_confirmation?: string };
 export type UpdateUserPayload = Partial<CreateUserPayload>;
@@ -95,4 +76,12 @@ export async function syncUserPermissions(userId: number, permissionIds: number[
     } catch (error) {
         throw handleApiError(error, 'Ocorreu um erro ao salvar as permissões do usuário.');
     }
+}
+
+export async function meUpdate(payload: UpdateUserPayload): Promise<void> {
+  try{
+    await api.post(`/api/user/me/update`,payload)
+  }catch(error){
+    throw handleApiError(error, 'Ocorreu um erro ao atualizar os dados do usuário.');
+  }
 }

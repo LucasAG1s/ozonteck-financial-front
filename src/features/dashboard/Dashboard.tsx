@@ -11,13 +11,10 @@ import { useState} from 'react'
 import { DateRangeFilter } from '@/components/ui/dateRangeFilter'
 
 
-
-
 export function Dashboard() { 
 
   const [startDate, setStartDate] = useState("2025-01-01");
   const [endDate, setEndDate] = useState("2025-01-30");
-
   const { selectedCompany } = useCompanies();
 
   const { data, isLoading, isError, refetch } = useQuery<DashboardData>({
@@ -33,7 +30,6 @@ export function Dashboard() {
 
   const entriesToExpensesChart = chartsData?.entriesToExpensesChart || [];
   const expensesCategoriesChart = chartsData?.expensesCategoriesChart || [];
-
 
 
   if (isLoading) {
@@ -83,7 +79,6 @@ export function Dashboard() {
         />
       </div>
 
-      {/* Cards de Indicadores */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -138,9 +133,7 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Barras */}
         <Card>
           <CardHeader>
             <CardTitle>Entradas vs Saídas (Últimos 6 meses)</CardTitle>
@@ -159,7 +152,6 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Gráfico de Pizza */}
         <Card>
           <CardHeader>
             <CardTitle>Principais Categorias de Despesa</CardTitle>
@@ -174,8 +166,8 @@ export function Dashboard() {
                   labelLine={false}
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   outerRadius={100}
-                  dataKey="amount" // pega o valor real
-                  nameKey="name"  // pega o nome da categoria
+                  dataKey="amount"
+                  nameKey="name"  
                 >
                   {expensesCategoriesChart.map((entry: any, index: number) => (
                     <Cell 

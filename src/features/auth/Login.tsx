@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Eye, EyeOff, Building2 } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'react-toastify'
-import { loginSchema, type LoginFormData } from './schemas/loginSchema'
+import { loginSchema, type LoginData as LoginFormData } from '@/lib/services/auth.service'
+import { BackgroundLogin } from './BackgrouLogin' 
 
 export function Login() {
   const [showPassword, setShowPassword] = useState(false)
@@ -29,14 +30,14 @@ export function Login() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/dashboard'
+      const from = location.state?.from?.pathname || '/'
       navigate(from, { replace: true })
     }
   }, [isAuthenticated, navigate, location])
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      const success = await login(data.email, data.password)
+      const success = await login(data.login, data.password)
       
       if (success) {
         const from = location.state?.from?.pathname || '/'
@@ -49,13 +50,12 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden"> {/* Removido bg-background daqui */}
+    <BackgroundLogin />
+      <div className="relative z-10 max-w-md w-full space-y-8"> {/* Mantido z-10 para o formulário */}
         <div className="text-center">
           <div className="flex justify-center">
-            <div className="bg-blue-600 p-3 rounded-full">
-              <Building2 className="h-8 w-8 text-white" />
-            </div>
+              <img src="/icon.png" alt="Ícone do Sistema" className="h-20 w-20" />
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-foreground">
             Sistema Financeiro
@@ -65,7 +65,7 @@ export function Login() {
           </p>
         </div>
 
-        <Card>
+        <Card className="bg-card/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Entrar</CardTitle>
             <CardDescription>
@@ -74,24 +74,23 @@ export function Login() {
           </CardHeader>
           <CardContent>
             {errorMessage && (
-              <div className="bg-red-50 border border-red-500 text-red-700 p-4 rounded-md mb-4">
-                <p>{errorMessage}</p>
+              <div className="bg-blue-100 border-l-4 border-blue-300 text-blue-600 p-4 rounded-md mb-4 shadow-md dark:bg-blue-950/30 dark:border-blue-400 dark:text-blue-300" role="alert">
+                <p className="font-medium">{errorMessage}</p>
               </div>
             )}
 
-        
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="login">Login</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  {...register('email')}
-                  className={errors.email ? 'border-red-500' : ''}
+                  id="login"
+                  type="text"
+                  placeholder="Digite seu login"
+                  {...register('login')}
+                  className={errors.login ? 'border-red-500' : ''}
                 />
-                {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email.message}</p>
+                {errors.login && (
+                  <p className="text-sm text-red-500">{errors.login.message}</p>
                 )}
               </div>
 
@@ -132,21 +131,10 @@ export function Login() {
                 {isLoading ? 'Entrando...' : 'Entrar'}
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Credenciais de teste:
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Admin: admin@example.com | Gerente: gerente@sistema.com
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Senha: w2e3r4t5y6
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
+      
     </div>
   )
 }
