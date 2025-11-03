@@ -107,8 +107,8 @@ export function AccountPlans() {
     queryKey: ['accountPlans'],
     queryFn: () => getAccountPlans(),
     staleTime: 1000 * 60 * 5, 
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const { mutate: createPlanMutation, isPending: isCreating } = useMutation({

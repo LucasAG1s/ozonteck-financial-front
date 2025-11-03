@@ -162,7 +162,6 @@ export async function deleteEmployee(id: number): Promise<void> {
 export async function getEmployeeById(id: number): Promise<IEmployee> {
   try {
     const response = await api.get<IEmployee>(`/api/employee/edit/${id}`);
-    console.log(response.data);
     return response.data;
   }catch(error){
     throw handleApiError(error, 'Ocorreu um erro ao buscar o colaborador.');
@@ -187,8 +186,6 @@ export async function getPaymentsData(companyId:number, reference_month:string):
         reference_month
       }
     })
-
-    console.log(response.data)
     return response.data
   }catch(error){
     throw handleApiError(error, 'Ocorreu um erro ao buscar os dados de pagamento.');

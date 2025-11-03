@@ -15,12 +15,6 @@ export const CompaniesContext = createContext<CompaniesContextType | undefined>(
 export function CompaniesProvider({ children }: { children: React.ReactNode }) {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
 
-  useEffect(() => {
-    const storedCompanyId = localStorage.getItem('selectedCompanyId');
-    if (storedCompanyId) {
-    }
-  }, [])
-
   const { data: companies = [], isLoading: loading } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: getCompanies,
@@ -29,13 +23,15 @@ export function CompaniesProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    if (companies.length > 0 && !selectedCompany) {
+    if (companies.length > 0) {
       const storedCompanyId = localStorage.getItem('selectedCompanyId');
-      const companyToSelect = companies.find(c => c.id === Number(storedCompanyId)) || companies[0];
-      setSelectedCompany(companyToSelect);
+      const companyFromStorage = storedCompanyId ? companies.find(c => c.id === Number(storedCompanyId)) : undefined;
+      if (!selectedCompany || !companies.some(c => c.id === selectedCompany.id)) {
+        setSelectedCompany(companyFromStorage || companies[0]);
+      }
     }
-  }, [companies, selectedCompany]);
-
+  }, [companies, selectedCompany]); 
+  
   return (
     <CompaniesContext.Provider value={{ companies, selectedCompany, setSelectedCompany, loading }}>
       {children}

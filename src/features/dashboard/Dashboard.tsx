@@ -7,14 +7,15 @@ import { IDashboardData as DashboardData } from '@/interfaces/finance/DashboardI
 import { useCompanies } from '@/hooks/useCompanies'
 import { useQuery } from '@tanstack/react-query'
 import { Skeleton } from "@/components/ui/skeleton"
-import { useState} from 'react'
+import { useState } from 'react'
 import { DateRangeFilter } from '@/components/ui/dateRangeFilter'
+import { startOfMonth, endOfMonth, format } from 'date-fns'
 
 
 export function Dashboard() { 
 
-  const [startDate, setStartDate] = useState("2025-01-01");
-  const [endDate, setEndDate] = useState("2025-01-30");
+  const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
   const { selectedCompany } = useCompanies();
 
   const { data, isLoading, isError, refetch } = useQuery<DashboardData>({
