@@ -1,7 +1,6 @@
 import { createContext, useState, useEffect, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '@/lib/services/auth.service'
-import { toast } from 'react-toastify';
 import { getPermissions, Permission } from '@/lib/services/permissions.service';
 import { User } from '@/interfaces/UserInterface';
 
@@ -193,7 +192,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       localStorage.removeItem('user')
       navigate('/login')
       
-      toast.success("Você foi desconectado com sucesso.")
     }
   }
 

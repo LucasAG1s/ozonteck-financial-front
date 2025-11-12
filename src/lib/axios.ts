@@ -20,6 +20,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (axios.isAxiosError(error)) {
+      const { response } = error;
+      if (response && response.status === 401) {
+        if (!window.location.pathname.startsWith('/login')) {
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+          window.location.href = '/login?sessionExpired';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 
 export const handleApiError = (error: unknown, defaultMessage: string): never => {
@@ -43,7 +59,6 @@ export const handleApiError = (error: unknown, defaultMessage: string): never =>
             if(status === 403){
               throw new Error('Você não tem permissão para acessar este recurso.')
             }
-
 
             if (data && data.message) {
                 throw new Error(data.message);

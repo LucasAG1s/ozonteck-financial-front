@@ -8,12 +8,14 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useCompanies } from '@/hooks/useCompanies'
 import { toast } from 'react-toastify'
 import { loginSchema, type LoginData as LoginFormData } from '@/lib/services/auth.service'
 import { BackgroundLogin } from './BackgrouLogin' 
 
 export function Login() {
   const [showPassword, setShowPassword] = useState(false)
+  const { fetchCompanies } = useCompanies()
   const { login, isLoading, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -29,6 +31,14 @@ export function Login() {
   })
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('sessionExpired') == 'true') {
+      toast.info("Você foi desconectado. Por favor, realize o login novamente.");
+      navigate('/login', { replace: true });
+    }
+  }, [location.search, navigate]);
+
+  useEffect(() => {
     if (isAuthenticated) {
       const from = location.state?.from?.pathname || '/'
       navigate(from, { replace: true })
@@ -40,6 +50,7 @@ export function Login() {
       const success = await login(data.login, data.password)
       
       if (success) {
+        await fetchCompanies()
         const from = location.state?.from?.pathname || '/'
         navigate(from, { replace: true })
       }
@@ -74,7 +85,7 @@ export function Login() {
           </CardHeader>
           <CardContent>
             {errorMessage && (
-              <div className="bg-blue-100 border-l-4 border-blue-300 text-blue-600 p-4 rounded-md mb-4 shadow-md dark:bg-blue-950/30 dark:border-blue-400 dark:text-blue-300" role="alert">
+              <div className=" border-l-4 border-red-600 text-red-600 p-4 rounded-md mb-4 shadow-md dark:bg-blue-950/30 dark:border-red-400 dark:text-red-300" role="alert">
                 <p className="font-medium">{errorMessage}</p>
               </div>
             )}

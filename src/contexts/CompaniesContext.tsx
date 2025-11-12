@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from "react"
+import { createContext, useState, useEffect, useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getCompanies } from "@/lib/services/finance/company.service"
 import { ICompany as Company } from "@/interfaces/universal/CompanyInterface"
@@ -7,6 +7,7 @@ interface CompaniesContextType {
   companies: Company[]
   selectedCompany: Company | null
   setSelectedCompany: (company: Company) => void
+  fetchCompanies: () => Promise<any>
   loading: boolean
 }
 
@@ -15,25 +16,29 @@ export const CompaniesContext = createContext<CompaniesContextType | undefined>(
 export function CompaniesProvider({ children }: { children: React.ReactNode }) {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
 
-  const { data: companies = [], isLoading: loading } = useQuery<Company[]>({
+  const { data: companies = [], isLoading: loading, refetch } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: getCompanies,
-    staleTime: 1000 * 60 * 15, 
-    refetchOnWindowFocus: true,
+    staleTime: 1000 * 60 * 60 * 24, 
+    enabled: true, 
   });
 
+  const fetchCompanies = useCallback(async () => {
+    return await refetch();
+  }, [refetch]);
+
   useEffect(() => {
-    if (companies.length > 0) {
+    if (!loading && companies.length > 0) {
       const storedCompanyId = localStorage.getItem('selectedCompanyId');
       const companyFromStorage = storedCompanyId ? companies.find(c => c.id === Number(storedCompanyId)) : undefined;
       if (!selectedCompany || !companies.some(c => c.id === selectedCompany.id)) {
         setSelectedCompany(companyFromStorage || companies[0]);
       }
     }
-  }, [companies, selectedCompany]); 
+  }, [companies, selectedCompany, loading]); 
   
   return (
-    <CompaniesContext.Provider value={{ companies, selectedCompany, setSelectedCompany, loading }}>
+    <CompaniesContext.Provider value={{ companies, selectedCompany, setSelectedCompany, fetchCompanies, loading }}>
       {children}
     </CompaniesContext.Provider>
   )
