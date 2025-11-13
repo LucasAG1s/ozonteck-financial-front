@@ -2,6 +2,21 @@
 
 Um sistema completo de gestão financeira desenvolvido em React com TypeScript, utilizando as melhores práticas de desenvolvimento frontend.
 
+## 🎖️ Qualidade e Boas Práticas
+
+Este projeto segue as melhores práticas de desenvolvimento React.js moderno:
+
+- ✅ **ESLint** configurado com regras TypeScript e React Hooks
+- ✅ **Error Boundaries** para tratamento de erros em produção
+- ✅ **Lazy Loading** de rotas para otimização de performance
+- ✅ **Code Splitting** automático com Vite
+- ✅ **Type Safety** com TypeScript strict mode
+- ✅ **Memoização** de contextos para evitar re-renders
+- ✅ **Validação** de variáveis de ambiente com Zod
+- ✅ **React Query** otimizado com cache inteligente
+
+📖 **[Veja a análise completa de boas práticas](./REACT_BEST_PRACTICES.md)**
+
 ## 🚀 Tecnologias Utilizadas
 
 - **React 18** - Biblioteca para construção de interfaces

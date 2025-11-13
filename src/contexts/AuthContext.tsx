@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useState, useEffect, ReactNode, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '@/lib/services/auth.service'
 import { getPermissions, Permission } from '@/lib/services/permissions.service';
@@ -199,14 +199,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return user?.permissions[permission] ?? false
   }
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo(() => ({
     user,
     isAuthenticated: !!user,
     isLoading,
     login,
     logout,
     hasPermission
-  }
+  }), [user, isLoading])
 
   return (
     <AuthContext.Provider value={value}>
