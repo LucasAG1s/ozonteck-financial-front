@@ -1,10 +1,9 @@
 import axios from 'axios';
 import type { AxiosError } from 'axios';
-
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://financial.ozonteck.cloud';
+import { env } from './env';
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: env.VITE_API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -38,16 +37,21 @@ api.interceptors.response.use(
 );
 
 
+interface ApiErrorResponse {
+  message?: string;
+  errors?: Record<string, string[]>;
+}
+
 export const handleApiError = (error: unknown, defaultMessage: string): never => {
     if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError;
+        const axiosError = error as AxiosError<ApiErrorResponse>;
 
         if (axiosError.response) {
-            const data = axiosError.response.data as any;
+            const data = axiosError.response.data;
             const status = axiosError.response.status;
 
             if (status === 422 && data && data.errors) {
-                const firstErrorMessage = Object.values(data.errors)[0] as string[] | undefined;
+                const firstErrorMessage = Object.values(data.errors)[0];
                 
                 if (firstErrorMessage && firstErrorMessage.length > 0) {
                     throw new Error(firstErrorMessage[0]);
