@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useCallback } from "react"
+import { createContext, useState, useEffect, useCallback, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getCompanies } from "@/lib/services/finance/company.service"
 import { ICompany as Company } from "@/interfaces/universal/CompanyInterface"
@@ -35,10 +35,18 @@ export function CompaniesProvider({ children }: { children: React.ReactNode }) {
         setSelectedCompany(companyFromStorage || companies[0]);
       }
     }
-  }, [companies, selectedCompany, loading]); 
+  }, [companies, loading]); 
+  
+  const contextValue = useMemo(() => ({
+    companies,
+    selectedCompany,
+    setSelectedCompany,
+    fetchCompanies,
+    loading
+  }), [companies, selectedCompany, fetchCompanies, loading]);
   
   return (
-    <CompaniesContext.Provider value={{ companies, selectedCompany, setSelectedCompany, fetchCompanies, loading }}>
+    <CompaniesContext.Provider value={contextValue}>
       {children}
     </CompaniesContext.Provider>
   )
