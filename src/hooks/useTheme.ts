@@ -11,7 +11,6 @@ export function useTheme() {
   useEffect(() => {
     const root = window.document.documentElement
     
-    // Remove classes anteriores
     root.classList.remove('light', 'dark')
     
     if (theme === 'system') {
@@ -24,7 +23,6 @@ export function useTheme() {
     }
   }, [theme])
 
-  // Escuta mudanças no tema do sistema
   useEffect(() => {
     if (theme !== 'system') return
 

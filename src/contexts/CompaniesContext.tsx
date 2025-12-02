@@ -35,7 +35,7 @@ export function CompaniesProvider({ children }: { children: React.ReactNode }) {
         setSelectedCompany(companyFromStorage || companies[0]);
       }
     }
-  }, [companies, loading]); // Removed selectedCompany from dependencies to prevent infinite loop
+  }, [companies, loading]); 
   
   const contextValue = useMemo(() => ({
     companies,
