@@ -21,7 +21,7 @@ export interface FormFieldConfig<TFieldValues extends z.AnyZodObject> {
   type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'datetime-local' | 'file' | 'email' | 'password' | 'month';
   accept?: string;
   placeholder?: string;
-  options?: { value: string | number; label: string }[];
+  options?: { value: string | number | undefined | null; label: string }[];
   step?: string;
   disabled?: boolean;
   gridCols?: number;
