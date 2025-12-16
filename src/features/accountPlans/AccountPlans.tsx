@@ -16,7 +16,10 @@ const accountPlanSchema = z.object({
   name: z.string().min(3, 'O nome deve ter pelo menos 3 caracteres.'),
   type: z.coerce.number().min(1, 'O tipo é obrigatório.'),
   description: z.string().optional(),
-  parent_id: z.coerce.number().nullable(),
+  parent_id: z.preprocess(
+    (val) => val === null || val === undefined || val === '' ? null : Number(val),
+    z.number().nullable()
+  ),
 });
 type AccountPlanNode = IAccountPlan & { children: AccountPlanNode[] };
 
@@ -210,7 +213,7 @@ export function AccountPlans() {
       label: 'Plano Pai (Opcional)',
       type: 'select',
       placeholder: 'Nenhum (Plano Raiz)',
-      options: [{ value: 'null', label: 'Nenhum (Plano Raiz)' }, ...plans.map(plan => ({
+      options: [{ value: null, label: 'Nenhum (Plano Raiz)' }, ...plans.map(plan => ({
         value: plan.id,
         label: `${plan.name} (${plan.type === 1 ? 'Receita' : 'Despesa'})`
       }))],
